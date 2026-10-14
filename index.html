@@ -1,0 +1,1455 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Pack Up!</title>
+<meta name="theme-color" content="#f7f0e1">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<script>
+/* =====================================================================
+   ROUTINE CONFIG — edit this part to change the game.
+   ---------------------------------------------------------------------
+   children   : who plays, their badge, backpack and the things they pack
+                (order = order on the start screen and checklist)
+     items    : { id }               -> uses the item from CONFIG.items
+                { id, days:["mon"] } -> only on those days (sun mon tue wed thu fri sat)
+                { id, color:"#hex" } -> colour just for this child
+                { id, spot:"shelf" } -> where it goes when unpacking (overrides item)
+   items      : every thing that can go in a bag (word = shown + spoken)
+                art: bottle lunchbox clothes sunscreen hat doll
+                     readingBag libraryBag mathsBag
+   spots      : places things go when unpacking (art: bench basket shelf hook toybox)
+   modes      : the two games and the steps in each
+   say        : everything the game says out loud ({name} {item} {spot} {day} {after})
+   After editing, bump CACHE in sw.js so the installed app picks up the change.
+   ===================================================================== */
+const CONFIG = {
+  title: "Pack Up!",
+
+  voice: { lang: "en-AU", rate: 0.92, slowRate: 0.78, pitch: 1.08 },
+
+  children: [
+    {
+      id: "luna",
+      name: "Luna",
+      badge: "moon",                 // moon | star
+      accent: "#a98bd8",
+      figure: "pigtails",            // pigtails | long
+      afterWord: "After school",     // label on the Unpack button
+      afterSay: "after school",      // how it's spoken
+      backpack: { style: "rainbow", color: "#b9a6e6", pocket: "#f3ecff" },
+      items: [
+        { id: "bottle", color: "#9b82d9" },
+        { id: "lunch" },
+        { id: "clothes" },
+        { id: "sunscreen" },
+        { id: "readingBag", days: ["mon"] },
+        { id: "libraryBag", days: ["wed"] },
+        { id: "mathsBag",   days: ["fri"] }
+      ]
+    },
+    {
+      id: "stella",
+      name: "Stella",
+      badge: "star",
+      accent: "#f0a65a",
+      figure: "long",
+      afterWord: "After childcare",
+      afterSay: "after childcare",
+      backpack: { style: "plain", color: "#7cc4b9", pocket: "#b3e0d8" },
+      items: [
+        { id: "bottle", color: "#ef9ab8" },
+        { id: "toy" },
+        { id: "hat" },
+        { id: "clothes" }
+      ]
+    }
+  ],
+
+  items: {
+    bottle:     { word: "water bottle",      art: "bottle",     spot: "bench",  color: "#7aa9de" },
+    lunch:      { word: "lunch box",         art: "lunchbox",   spot: "bench",  color: "#e57a6e" },
+    clothes:    { word: "change of clothes", art: "clothes",    spot: "basket" },
+    sunscreen:  { word: "sunscreen",         art: "sunscreen",  spot: "shelf" },
+    hat:        { word: "hat",               art: "hat",        spot: "hook",   color: "#f4d36b" },
+    toy:        { word: "toy",               art: "doll",       spot: "toybox", say: "dolly" },
+    readingBag: { word: "reading bag",       art: "readingBag", spot: "shelf",  color: "#7aa9de" },
+    libraryBag: { word: "library bag",       art: "libraryBag", spot: "shelf",  color: "#8cc47e" },
+    mathsBag:   { word: "maths bag",         art: "mathsBag",   spot: "shelf",  color: "#f4d36b" }
+  },
+
+  spots: {
+    bench:  { word: "kitchen bench",  say: "on the kitchen bench",  art: "bench" },
+    basket: { word: "washing basket", say: "in the washing basket", art: "basket" },
+    shelf:  { word: "shelf",          say: "on the shelf",          art: "shelf" },
+    hook:   { word: "hook",           say: "on the hook",           art: "hook" },
+    toybox: { word: "toy box",        say: "in the toy box",        art: "toybox" }
+  },
+
+  modes: {
+    pack:   { word: "Pack",   time: "Morning", icon: "sun",   steps: ["packItems", "zipUp"] },
+    unpack: { word: "Unpack",                  icon: "house", steps: ["bringIn", "openBag", "putAway"] }
+  },
+
+  // Short words shown on screen (always next to a picture)
+  labels: {
+    home: "Who's playing?",
+    choose: "Pack or unpack?",
+    pack: "Pack your bag",
+    bringIn: "Bring in",
+    bringInBanner: "Bring your bag inside",
+    openBag: "Open bag",
+    openBanner: "Open your bag",
+    putAway: "Put things away",
+    packed: "All packed!",
+    unpacked: "All unpacked!",
+    again: "again",
+    play: "Again",
+    done: "Done",
+    hooray: "Hooray"
+  },
+
+  // Everything spoken out loud. Arrays = pick one at random.
+  say: {
+    home: "Who's playing? Tap Luna, or Stella.",
+    chooseMode: "Hi {name}! Is it morning, time to pack? Or {after}, time to unpack?",
+    packStart: "Let's pack your bag! Drag each thing into your backpack.",
+    packResume: "Let's keep packing!",
+    todayExtra: "It's {day}! Don't forget your {item}.",
+    packHint: "Put your {item} in your backpack.",
+    packed: ["{item}. In it goes!", "{item}. Got it!", "{item}. Nice one!", "{item}. Great!"],
+    notQuite: "Bring it right over to your backpack.",
+    allPacked: "All packed! Zip it up!",
+    bringIn: "Your bag is in the car. Drag it into the house.",
+    openBag: "Tap your bag to open it.",
+    putAway: "Now put each thing in its spot.",
+    putHint: "Your {item} goes {spot}.",
+    tapItem: "{item}. It goes {spot}.",
+    placed: ["{item}, {spot}. Great!", "{item}, {spot}. Well done!", "{item}, {spot}. Nice!"],
+    wrongSpot: "Hmm. Your {item} goes {spot}.",
+    allUnpacked: "All unpacked!",
+    cheerPack: "Hooray! You packed your bag, {name}! Great job!",
+    cheerUnpack: "Hooray! You unpacked your bag, {name}! Great job!"
+  }
+};
+</script>
+
+<style>
+@font-face {
+  font-family: "Andika";
+  src: url(data:font/woff2;base64,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) format("woff2");
+  font-weight: 400 900;
+  font-display: swap;
+}
+:root {
+  --paper: #f7f0e1;
+  --card: #fffbf2;
+  --ink: #3b3431;
+  --soft: #8a7f76;
+  --sun: #f4d36b;
+  --glow: rgba(244, 211, 107, .75);
+  --accent: #a98bd8;
+  --font: "Andika", "Comic Neue", "Chalkboard SE", system-ui, sans-serif;
+  --wob: 22px 30px 24px 28px / 28px 22px 30px 24px;   /* wobbly hand-drawn corners */
+  --wob2: 30px 20px 28px 22px / 22px 28px 20px 30px;
+  --line: 3.5px solid var(--ink);
+  --tile: clamp(100px, min(11vw, 19vh), 142px);
+  --btn: clamp(76px, 11vmin, 96px);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: var(--paper); color: var(--ink);
+  font-family: var(--font); font-weight: 700;
+  touch-action: none; overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+}
+body::before {           /* paper grain */
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .5;
+  background-image:
+    radial-gradient(circle at 20% 15%, rgba(255,255,255,.5), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(214,196,160,.25), transparent 50%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .45  0 0 0 0 .38  0 0 0 0 .28  0 0 0 .22 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; touch-action: none; }
+svg.art { display: block; width: 100%; height: 100%; overflow: visible; }
+
+#app { position: fixed; inset: 0; z-index: 1; display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+
+/* ---------- top bar ---------- */
+.topbar { display: grid; grid-template-columns: auto 1fr auto auto auto; align-items: center; gap: 14px; padding: 12px 18px 8px; }
+.btn {
+  width: var(--btn); height: var(--btn); border: var(--line); border-radius: var(--wob);
+  background: var(--card); box-shadow: 0 5px 0 rgba(59,52,49,.16);
+  display: grid; place-items: center; transition: transform .12s;
+}
+.btn:active { transform: translateY(3px) scale(.97); box-shadow: 0 2px 0 rgba(59,52,49,.16); }
+.btn svg { width: 62%; height: 62%; }
+.btn.say { width: calc(var(--btn) * 1.18); height: calc(var(--btn) * 1.18); background: #fff6d6; grid-template-rows: 1fr auto; padding: 8px 0 6px; }
+.btn.say svg { width: 58%; height: 100%; }
+.btn.say span { font-size: 17px; line-height: 1; }
+.btn.small { width: calc(var(--btn) * .72); height: calc(var(--btn) * .72); opacity: .8; }
+.btn.tiny { width: 48px; height: 48px; opacity: .45; border-width: 2.5px; box-shadow: none; }
+.btn.invisible { visibility: hidden; }
+.btn.invite { animation: invite 2.4s ease-in-out infinite; }
+@keyframes invite { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); box-shadow: 0 5px 0 rgba(59,52,49,.16), 0 0 0 8px var(--glow); } }
+
+.banner { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 6px 20px; min-height: 76px;
+  border: var(--line); border-radius: var(--wob2); background: var(--card); }
+.banner-icon { flex: 0 0 auto; min-width: 58px; height: 58px; display: flex; align-items: center; justify-content: center; gap: 2px; }
+.banner-icon > svg { width: 58px; }
+.banner-icon svg { max-height: 100%; }
+.banner-text { font-size: clamp(24px, 3.4vw, 38px); line-height: 1.1; }
+
+#screen { position: relative; min-height: 0; }
+.enter { animation: enter .35s ease-out both; }
+@keyframes enter { from { opacity: 0; transform: translateY(10px); } }
+
+/* ---------- shared bits ---------- */
+.name-box { display: inline-flex; align-items: center; gap: 8px; padding: 4px 16px; border: var(--line); border-radius: var(--wob2);
+  background: #fff; font-size: clamp(28px, 3.6vw, 42px); }
+.name-box .badge { width: 1.1em; height: 1.1em; }
+.wiggle { animation: wiggle .5s ease-in-out; }
+@keyframes wiggle { 25% { transform: rotate(-6deg) scale(1.05); } 60% { transform: rotate(5deg) scale(1.05); } }
+
+/* ---------- home ---------- */
+.home { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3vw; padding: 1vh 3vw 4vh; }
+.kid-card { position: relative; border: var(--line); border-radius: var(--wob); background: var(--card);
+  box-shadow: 0 8px 0 rgba(59,52,49,.12); display: grid; grid-template-rows: auto 1fr; justify-items: center; padding: 3vh 2vw 2vh;
+  transition: transform .15s; }
+.kid-card:active { transform: scale(.97); }
+.kid-card .name-box { font-size: clamp(40px, 6vmin, 64px); border-color: var(--ink); background: color-mix(in srgb, var(--accent) 22%, white); }
+.kid-pics { display: flex; align-items: flex-end; justify-content: center; gap: 2vw; width: 100%; min-height: 0; padding-top: 2vh; }
+.kid-pics .fig { height: 92%; aspect-ratio: 120/200; }
+.kid-pics .mini-bag { height: 62%; aspect-ratio: 300/340; }
+
+/* ---------- mode choice ---------- */
+.modes { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3vw; padding: 1vh 4vw 4vh; }
+.mode-card { border: var(--line); border-radius: var(--wob2); background: var(--card); box-shadow: 0 8px 0 rgba(59,52,49,.12);
+  display: grid; grid-template-rows: 1fr auto auto; justify-items: center; align-items: center; padding: 3vh 2vw; gap: 1vh; transition: transform .15s; }
+.mode-card:active { transform: scale(.97); }
+.mode-card .mode-art { height: 100%; max-height: 40vh; aspect-ratio: 1; display: grid; place-items: center; }
+.mode-card .mode-time { font-size: clamp(24px, 3.2vw, 36px); color: var(--soft); }
+.mode-card .mode-word { font-size: clamp(42px, 6vw, 70px); display: flex; align-items: center; gap: .3em; }
+.mode-card .mode-word .ic { width: 1.1em; height: 1.1em; }
+.mode-card .today-chip { display: inline-flex; align-items: center; gap: 8px; font-size: 22px; padding: 2px 12px; border: 2.5px dashed var(--ink); border-radius: 14px; }
+.mode-card .today-chip .ic { width: 40px; height: 40px; }
+
+/* ---------- game layout ---------- */
+.game { height: 100%; display: grid; grid-template-columns: minmax(250px, 28%) minmax(0, 1fr); gap: 18px; padding: 4px 18px 16px; }
+.chart { position: relative; border: var(--line); border-radius: var(--wob); background: #fffdf6; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; min-height: 0;
+  box-shadow: 0 6px 0 rgba(59,52,49,.1); --row: clamp(46px, 8vh, 72px); }
+.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.chart-head .name-box { font-size: clamp(26px, 3vw, 36px); }
+.chart-head .mini-bag { width: calc(var(--row) * 1.1); aspect-ratio: 300/340; }
+.checklist { list-style: none; margin: 0; padding: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; gap: 4px; min-height: 0; }
+.row { display: grid; grid-template-columns: calc(var(--row) * 1.15) 1fr auto; align-items: center; gap: 10px; min-height: var(--row); padding: 2px 4px; border-radius: 16px; }
+.row .ic { height: var(--row); display: grid; place-items: center; }
+.row .ic svg { max-height: 100%; }
+.row .word { font-size: clamp(20px, 2.3vw, 28px); line-height: 1.05; }
+.row.done .word { color: var(--soft); }
+.box { width: calc(var(--row) * .72); height: calc(var(--row) * .72); border: var(--line); border-radius: 8px 12px 9px 11px; background: #fff; display: grid; place-items: center; }
+.box svg { width: 115%; height: 115%; overflow: visible; }
+.box .tick { fill: none; stroke: #4f9a55; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 60; stroke-dashoffset: 60; transition: stroke-dashoffset .45s ease-out; }
+.row.done .tick { stroke-dashoffset: 0; }
+.row.pop { animation: rowpop .5s ease-out; }
+@keyframes rowpop { 40% { background: rgba(244,211,107,.45); transform: scale(1.04); } }
+
+.days { display: flex; align-items: center; justify-content: center; gap: 6px; padding-top: 6px; border-top: 2.5px dashed rgba(59,52,49,.3); }
+.days .dash { width: 14px; border-top: 3px solid var(--ink); }
+.day { display: grid; justify-items: center; gap: 2px; padding: 4px 8px; border-radius: 14px; font-size: 20px; }
+.day .d { border: 3px solid var(--ink); border-radius: 8px 11px 8px 10px; padding: 0 8px; background: #fff; }
+.day .ic { width: 46px; height: 40px; }
+.day.today { background: rgba(244,211,107,.55); box-shadow: 0 0 0 3px var(--sun); }
+
+.play { position: relative; min-height: 0; min-width: 0; }
+
+/* ---------- backpack ---------- */
+.backpack { position: relative; aspect-ratio: 300/340; transform-origin: 50% 95%; transition: transform .25s; }
+.backpack .bp-layer { position: absolute; inset: 0; }
+.backpack .bp-inner { position: absolute; inset: 0; transform: scale(calc(1 + var(--fill, 0) * .025)); transform-origin: 50% 95%; transition: transform .3s; }
+.backpack.closed .bp-back, .backpack.closed .bp-front, .backpack.closed .bp-peek { display: none; }
+.backpack.open .bp-closed { display: none; }
+.bp-peek { position: absolute; left: 20%; width: 60%; top: 6%; height: 40%; display: flex; justify-content: center; align-items: flex-end; }
+.bp-peek .peek { width: 38%; margin: 0 -7%; aspect-ratio: 1; transform: translateY(6%); animation: peekin .35s ease-out both; }
+@keyframes peekin { from { transform: translateY(60%) scale(.6); opacity: 0; } }
+.backpack.near { transform: scale(1.08); }
+.backpack.near::after, .spot.near::after, .house.near::after { content: ""; position: absolute; inset: -4%; border-radius: 40%; box-shadow: 0 0 0 8px var(--glow), 0 0 40px 14px var(--glow); pointer-events: none; }
+.backpack.bump { animation: bump .45s ease-out; }
+@keyframes bump { 30% { transform: scale(1.06, .95); } 65% { transform: scale(.98, 1.04); } }
+.backpack.pulse { animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } 50% { transform: scale(1.05); filter: drop-shadow(0 0 14px var(--sun)); } }
+
+/* ---------- pack scene ---------- */
+.pack-play { display: grid; grid-template-rows: 1fr auto; }
+.bag-zone { display: flex; align-items: flex-end; justify-content: center; min-height: 0; padding-top: 6px; }
+.bag-zone .backpack { height: min(100%, 400px); max-width: 80%; }
+.table-zone { position: relative; padding: 0 1%; }
+.table-items { position: relative; z-index: 1; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 6px 8px; padding: 0 1%; margin-bottom: -10px; }
+.table { height: clamp(48px, 9vh, 76px); }
+.table svg { width: 100%; height: 100%; }
+
+.item { position: relative; width: var(--tile); display: grid; grid-template-rows: calc(var(--tile) * .82) auto; justify-items: center; align-items: end; padding: 4px; border-radius: 22px; touch-action: none; }
+.item .item-art { width: 92%; height: 100%; }
+.item .item-word { font-size: clamp(17px, 1.9vw, 22px); line-height: 1.02; text-align: center; padding: 2px 6px; background: rgba(255,251,242,.85); border-radius: 10px; }
+.item.lifted, .item.gone { visibility: hidden; }
+.item.in-bag { opacity: 0; transform: translateX(-40%) scale(.2); pointer-events: none; }
+.item.pop-out { transition: opacity .35s ease-out, transform .45s cubic-bezier(.3,1.5,.5,1); }
+
+#drag-layer { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+.drag-clone { position: fixed !important; margin: 0 !important; pointer-events: none; z-index: 51; will-change: transform; filter: drop-shadow(0 14px 10px rgba(59,52,49,.25)); }
+.drag-clone .item-word { background: rgba(255,251,242,.95); }
+
+/* ---------- unpack: outside ---------- */
+.outside { position: absolute; inset: 0; border: var(--line); border-radius: var(--wob); overflow: hidden;
+  background: linear-gradient(to bottom, #eaf3f7 0%, #f7f0e1 62%, #d7e8b8 62%, #c5dea0 100%); }
+.outside .ground-line { position: absolute; left: 0; right: 0; top: 61%; height: 16px; }
+.outside .scene { position: absolute; left: 4%; right: 4%; bottom: 14%; display: flex; align-items: flex-end; justify-content: space-between; }
+.car-wrap { position: relative; width: 52%; aspect-ratio: 420/250; }
+.car-wrap .car { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.car-wrap .bag-item { position: absolute; z-index: 1; left: 28.5%; top: 23%; width: 27%; touch-action: none; }
+.outside .sky-sun { position: absolute; left: 5%; top: 7%; width: 13%; aspect-ratio: 1; opacity: .9; }
+.car-wrap .bag-item.lifted { visibility: hidden; }
+.car-wrap .bag-item .backpack { animation: pulse 1.8s ease-in-out infinite; }
+.drag-clone .backpack { animation: none; }
+.house { position: relative; width: 36%; aspect-ratio: 320/340; transition: transform .25s; }
+.house.near { transform: scale(1.05); }
+.house .door-open { opacity: 0; transition: opacity .2s; }
+.house.near .door-open, .house.opened .door-open { opacity: 1; }
+.house > svg { position: absolute; inset: 0; }
+.hint-arrow { position: absolute; left: 46%; width: 22%; bottom: 52%; opacity: .7; pointer-events: none; animation: nudge 1.6s ease-in-out infinite; }
+@keyframes nudge { 50% { transform: translateX(14px); } }
+.drag-clone.bag-item { width: auto; }
+.bag-item .backpack { width: 100%; }
+
+/* ---------- unpack: inside ---------- */
+.room { position: absolute; inset: 0; border: var(--line); border-radius: var(--wob); overflow: hidden; display: grid; grid-template-rows: 1.15fr 1fr;
+  background: linear-gradient(to bottom, #fbf3e3 0%, #f6ead2 58%, #e3c79c 58%, #d9bb8c 100%); }
+.room .floor-line { position: absolute; left: 0; right: 0; top: 57%; height: 14px; pointer-events: none; }
+.spots { position: relative; display: flex; justify-content: space-around; align-items: flex-end; gap: 10px; padding: 12px 14px 0; }
+.spot { position: relative; width: clamp(128px, 15vw, 190px); display: grid; grid-template-rows: auto auto; justify-items: center; padding: 6px; border-radius: 24px; transition: transform .2s, background .2s; }
+.spot .spot-art { width: 100%; aspect-ratio: 200/170; position: relative; }
+.spot .spot-word { font-size: clamp(17px, 1.9vw, 22px); text-align: center; line-height: 1.05; margin-top: 2px; }
+.spot .spot-items { position: absolute; left: 6%; right: 6%; display: flex; justify-content: center; align-items: flex-end; pointer-events: none; }
+.spot .spot-items .placed { width: 38%; aspect-ratio: 1; margin: 0 -5%; animation: peekin .35s ease-out both; }
+.spot.glow { background: rgba(255,246,214,.85); box-shadow: 0 0 0 5px var(--glow), 0 0 30px 10px var(--glow); animation: glowpulse 1.2s ease-in-out infinite; }
+@keyframes glowpulse { 50% { box-shadow: 0 0 0 8px var(--glow), 0 0 40px 16px var(--glow); } }
+.spot.near { transform: scale(1.08); }
+.floor-row { position: relative; display: flex; align-items: center; gap: 2%; padding: 6px 3% 10px; min-height: 0; }
+.floor-row .backpack { height: 92%; max-height: 260px; flex: 0 0 auto; }
+.floor-items { flex: 1; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px 8px; }
+.floor-items .item { --tile: clamp(96px, min(11vw, 16vh), 136px); }
+
+/* ---------- overlays ---------- */
+.overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; }
+.overlay[hidden] { display: none; }
+#celebrate { background: rgba(247,240,225,.97); }
+#confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cele-card { position: relative; display: grid; justify-items: center; gap: 2vh; text-align: center; animation: enter .5s ease-out both; }
+.cele-badge { width: min(30vmin, 240px); aspect-ratio: 1; animation: float 2.6s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-12px) rotate(4deg); } }
+.cele-title { font-size: clamp(56px, 10vmin, 104px); line-height: 1; }
+.cele-sub { display: flex; align-items: center; gap: 14px; font-size: clamp(28px, 5vmin, 44px); }
+.cele-sub .ic { width: 1.6em; height: 1.6em; }
+.cele-btns { display: flex; gap: 4vw; margin-top: 2vh; }
+.big-btn { min-width: 190px; height: 110px; padding: 0 26px; border: var(--line); border-radius: var(--wob); background: var(--card); box-shadow: 0 6px 0 rgba(59,52,49,.16);
+  display: inline-flex; align-items: center; justify-content: center; gap: 14px; font-size: 34px; }
+.big-btn:active { transform: translateY(3px); }
+.big-btn svg { width: 60px; height: 60px; }
+.big-btn.primary { background: #e9f6df; }
+
+#grownup { background: rgba(59,52,49,.35); font-family: system-ui, sans-serif; font-weight: 400; }
+#grownup .panel { width: min(640px, 92vw); max-height: 90vh; overflow: auto; touch-action: pan-y; background: #fffdf8; border: var(--line); border-radius: 22px; padding: 18px 22px; }
+#grownup h2 { margin: 0 0 6px; font-size: 24px; }
+#grownup h3 { margin: 16px 0 6px; font-size: 18px; }
+#grownup p { margin: 4px 0 8px; color: #6b625b; font-size: 15px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 10px 14px; border: 2px solid var(--ink); border-radius: 12px; background: #fff; font-size: 17px; min-width: 56px; }
+.chip.on { background: var(--sun); }
+#grownup button { touch-action: manipulation; }
+#grownup select { font-size: 17px; padding: 8px; max-width: 100%; border: 2px solid var(--ink); border-radius: 10px; background: #fff; }
+.panel-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
+
+/* ---------- portrait ---------- */
+@media (orientation: portrait) {
+  .home, .modes { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; padding: 1vh 5vw 3vh; }
+  .kid-card { padding: 2vh 4vw 1.5vh; }
+  .kid-pics .fig { height: 96%; }
+  .spot { width: clamp(128px, 21vw, 190px); }
+  .floor-items .item { --tile: clamp(100px, 15vw, 136px); }
+  .mode-card { grid-template-rows: 1fr auto auto; }
+  .mode-card .mode-art { max-height: 22vh; }
+  .game { grid-template-columns: 1fr; grid-template-rows: auto 1fr; gap: 12px; }
+  .chart { --row: clamp(44px, 5vh, 62px); }
+  .checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
+  .bag-zone .backpack { height: min(100%, 440px); }
+  .room { grid-template-rows: 1fr 1fr; }
+  .floor-row .backpack { height: 70%; }
+  .outside .scene { bottom: 30%; }
+  .outside { background: linear-gradient(to bottom, #eaf3f7 0%, #f7f0e1 70%, #d7e8b8 70%, #c5dea0 100%); }
+  .outside .ground-line { top: 69%; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .topbar { padding: 6px 12px 4px; }
+  .banner { min-height: 60px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn.invite, .backpack.pulse, .spot.glow, .cele-badge, .hint-arrow { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- shared crayon filter -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="crayon" x="-6%" y="-6%" width="112%" height="112%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="4" result="warp"/>
+      <feDisplacementMap in="SourceGraphic" in2="warp" scale="3.2" xChannelSelector="R" yChannelSelector="G" result="wob"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="1" seed="9" result="grain"/>
+      <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.2 0 0 0 2.25" result="grainA"/>
+      <feComposite in="wob" in2="grainA" operator="in"/>
+    </filter>
+  </defs>
+</svg>
+
+<div id="app">
+  <header class="topbar">
+    <button class="btn" id="btnBack" aria-label="Back"></button>
+    <div class="banner" id="banner"><span class="banner-icon"></span><span class="banner-text"></span></div>
+    <button class="btn say invite" id="btnSay" aria-label="Say it again"></button>
+    <button class="btn small" id="btnFull" aria-label="Full screen"></button>
+    <button class="btn tiny" id="btnGrown" aria-label="Grown-up settings"></button>
+  </header>
+  <main id="screen"></main>
+</div>
+
+<div id="drag-layer"></div>
+
+<div id="celebrate" class="overlay" hidden>
+  <canvas id="confetti"></canvas>
+  <div class="cele-card">
+    <div class="cele-badge"></div>
+    <div class="cele-title"></div>
+    <div class="cele-sub"></div>
+    <div class="cele-btns">
+      <button class="big-btn" id="celeAgain"></button>
+      <button class="big-btn primary" id="celeDone"></button>
+    </div>
+  </div>
+</div>
+
+<div id="grownup" class="overlay" hidden>
+  <div class="panel" role="dialog" aria-label="Grown-up settings">
+    <h2>Grown-ups</h2>
+    <h3>Practice day</h3>
+    <p>Changes which extra bag shows up. Goes back to the real day at midnight.</p>
+    <div class="chips" id="dayChips"></div>
+    <h3>Voice</h3>
+    <div class="chips"><select id="voiceSel"></select><button class="chip" id="voiceTest">Test</button></div>
+    <h3>Speaking speed</h3>
+    <div class="chips" id="rateChips"></div>
+    <h3>Sound</h3>
+    <div class="chips" id="soundChips"></div>
+    <div class="panel-foot">
+      <button class="chip" id="resetToday">Start today over</button>
+      <button class="chip on" id="closeGrown">Close</button>
+    </div>
+  </div>
+</div>
+
+<noscript>This game needs JavaScript turned on.</noscript>
+
+<script>
+/* =====================================================================
+   GAME CODE — you shouldn't need to change anything below for routine edits.
+
+   Built so later features slot in:
+   - Decoy items:   add items with decoy:true in CONFIG; screenPack() puts every
+                    item on the table — add a "leave out" tray target there.
+   - Stickers/streak: every finish is logged in Store.data.history
+                    ({date, child, mode, day}) — a sticker screen can read it.
+   - Weather mode:  isActive() is the one place items are switched on/off
+                    (it already handles `days`; add `weather` the same way).
+   - Real photos:   itemArt() draws every item; give an item photo:"data:..."
+                    and return an <img> there instead of the SVG.
+   - Decorate bag:  backpack art takes {style, color, pocket}; stickers can be
+                    added in ART.backpackParts().
+   - Hidden settings: openGrown() is the settings panel; attach a long-press.
+   ===================================================================== */
+(() => {
+'use strict';
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const pick = a => Array.isArray(a) ? a[Math.floor(Math.random() * a.length)] : a;
+const fill = (str, v = {}) => String(pick(str) || '').replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
+const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/* ---------------- storage (wrapped so private mode / blocked storage never breaks the game) ---------------- */
+const Store = {
+  KEY: 'packup.v1',
+  data: { settings: {}, progress: {}, history: [] },
+  load() {
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d && typeof d === 'object') this.data = { settings: d.settings || {}, progress: d.progress || {}, history: d.history || [] };
+      }
+    } catch (e) { /* storage unavailable — play without saving */ }
+    const today = todayKey();
+    for (const k of Object.keys(this.data.progress)) if (!k.startsWith(today)) delete this.data.progress[k];
+    if (this.data.history.length > 600) this.data.history = this.data.history.slice(-600);
+    this.save();
+  },
+  save() { try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); } catch (e) {} },
+  get settings() { return this.data.settings; }
+};
+
+/* ---------------- routine helpers ---------------- */
+function currentDay() {
+  const o = Store.settings.dayOverride;
+  if (o && o.date === todayKey() && o.day >= 0 && o.day <= 6) return o.day;
+  return new Date().getDay();
+}
+function isActive(entry, ctx) {
+  if (entry.days && !entry.days.map(d => String(d).toLowerCase().slice(0, 3)).includes(DAYS[ctx.day])) return false;
+  // LATER (weather mode): if (entry.weather && !entry.weather.includes(ctx.weather)) return false;
+  return true;
+}
+function resolveItem(entry) {
+  const e = typeof entry === 'string' ? { id: entry } : entry;
+  const base = CONFIG.items[e.id] || { word: e.id, art: 'bottle' };
+  return { ...base, ...e, id: e.id };
+}
+function itemsFor(child, ctx) { return child.items.filter(e => isActive(e, ctx)).map(resolveItem); }
+function itemSay(item) { return item.say || item.word; }
+function spotOf(item) { return CONFIG.spots[item.spot] || CONFIG.spots.shelf || Object.values(CONFIG.spots)[0]; }
+function progKey(mode) { return `${todayKey()}|${S.child.id}|${mode}|${S.ctx.day}`; }
+function getProg(mode, fresh) {
+  const k = progKey(mode);
+  if (fresh || !Store.data.progress[k]) Store.data.progress[k] = { done: [], step: null };
+  return Store.data.progress[k];
+}
+function shade(hex, amt) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const f = c => Math.max(0, Math.min(255, Math.round(c + (amt < 0 ? c * amt : (255 - c) * amt))));
+  const r = f(n >> 16), g = f((n >> 8) & 255), b = f(n & 255);
+  return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
+
+/* =====================================================================
+   ART — every picture, drawn as inline SVG in a crayon style
+   ===================================================================== */
+const INK = '#3b3431';
+const K = (w = 4) => `stroke="${INK}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"`;
+const SKIN = '#fdf3e6';
+const HAIR = '#4a3f3b';
+
+function starPath(cx, cy, R, r, n = 5) {
+  let d = '';
+  for (let i = 0; i < n * 2; i++) {
+    const rad = i % 2 ? r : R, a = -Math.PI / 2 + i * Math.PI / n;
+    d += (i ? 'L' : 'M') + (cx + rad * Math.cos(a)).toFixed(1) + ' ' + (cy + rad * Math.sin(a)).toFixed(1) + ' ';
+  }
+  return d + 'Z';
+}
+function smallBag(color, flap, front) {
+  return `<path d="M44 42 Q44 22 60 22 Q76 22 76 42" fill="none" ${K(5)}/>
+    <rect x="14" y="38" width="92" height="70" rx="9" fill="${color}" ${K()}/>
+    <path d="M14 47 Q14 38 23 38 H97 Q106 38 106 47 V58 Q60 72 14 58 Z" fill="${flap}" ${K(3.5)}/>
+    <circle cx="60" cy="64" r="4" fill="${INK}"/>${front}`;
+}
+
+const ART = {
+  bottle: { vb: '0 0 120 120', draw: o => {
+    const c = o.color || '#7aa9de';
+    return `<path d="M68 22 Q84 18 84 32 Q84 42 74 40" fill="none" ${K(3.5)}/>
+      <rect x="47" y="16" width="26" height="22" rx="6" fill="#8d8f99" ${K()}/>
+      <path d="M44 46 Q44 38 52 38 H68 Q76 38 76 46 V50 Q82 55 82 64 V100 Q82 110 72 110 H48 Q38 110 38 100 V64 Q38 55 44 50 Z" fill="${c}" ${K()}/>
+      <path d="M39 70 H81 V88 H39 Z" fill="#fffaf0" opacity=".8"/>
+      <path d="M39 70 H81 M39 88 H81" ${K(3)}/>
+      <circle cx="60" cy="79" r="4.5" fill="${c}"/>
+      <path d="M48 56 V64" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7"/>`;
+  }},
+  lunchbox: { vb: '0 0 120 120', draw: o => {
+    const c = o.color || '#e57a6e';
+    return `<path d="M40 44 V34 Q40 22 60 22 Q80 22 80 34 V44" fill="none" ${K(6)}/>
+      <rect x="12" y="42" width="96" height="64" rx="13" fill="${c}" ${K()}/>
+      <path d="M12 62 H108" ${K(3.5)}/>
+      <rect x="51" y="55" width="18" height="14" rx="4" fill="#f4d36b" ${K(3)}/>
+      <circle cx="86" cy="86" r="9" fill="#8cc47e" ${K(3)}/>
+      <path d="M86 77 Q88 71 94 70" fill="none" ${K(3)}/>
+      <path d="M24 82 h28 M24 92 h20" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".6"/>`;
+  }},
+  clothes: { vb: '0 0 120 120', draw: () =>
+    `<rect x="8" y="26" width="104" height="82" rx="13" fill="#e4f0f2" ${K()}/>
+     <path d="M16 38 H104" stroke="${INK}" stroke-width="3" stroke-dasharray="2 5" stroke-linecap="round"/>
+     <path d="M98 33 l6 11" ${K(3)}/>
+     <path d="M14 58 L26 48 Q38 56 50 48 L62 58 L56 66 L50 62 V92 H26 V62 L20 66 Z" fill="#7aa9de" ${K(3.5)}/>
+     <path d="M70 52 H100 L104 92 H90 L85 70 L80 92 H66 Z" fill="#f0a65a" ${K(3.5)}/>`
+  },
+  sunscreen: { vb: '0 0 120 120', draw: () => {
+    let rays = '';
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4, x1 = 60 + 15 * Math.cos(a), y1 = 70 + 15 * Math.sin(a), x2 = 60 + 21 * Math.cos(a), y2 = 70 + 21 * Math.sin(a);
+      rays += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}" ${K(3)}/>`;
+    }
+    return `<rect x="46" y="12" width="28" height="20" rx="5" fill="#f0a65a" ${K()}/>
+      <path d="M42 32 H78 Q84 32 84 38 V100 Q84 110 74 110 H46 Q36 110 36 100 V38 Q36 32 42 32 Z" fill="#fff1bf" ${K()}/>
+      <circle cx="60" cy="70" r="11" fill="#f4d36b" ${K(3)}/>${rays}
+      <path d="M46 98 H74" ${K(3)}/>`;
+  }},
+  hat: { vb: '0 0 120 120', draw: o => {
+    const c = o.color || '#f4d36b';
+    return `<ellipse cx="60" cy="80" rx="52" ry="15" fill="${c}" ${K()}/>
+      <path d="M30 80 Q28 40 60 38 Q92 40 90 80 Q60 90 30 80 Z" fill="${c}" ${K()}/>
+      <path d="M31 70 Q60 80 89 70" fill="none" stroke="#e57a6e" stroke-width="8" stroke-linecap="round"/>
+      <path d="M31 66 Q60 76 89 66 M32 75 Q60 85 88 75" fill="none" ${K(2.5)}/>
+      <path d="M44 52 Q50 46 58 45" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none" opacity=".7"/>`;
+  }},
+  doll: { vb: '0 0 120 120', draw: () => {
+    const limb = d => `<path d="${d}" fill="none" stroke="${INK}" stroke-width="14" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${SKIN}" stroke-width="8" stroke-linecap="round"/>`;
+    return limb('M52 90 L48 106') + limb('M68 90 L72 106') + limb('M47 63 L26 75') + limb('M73 63 L94 75') +
+      `<path d="M43 60 Q60 50 77 60 L79 90 Q60 99 41 90 Z" fill="#ef9ab8" ${K()}/>
+       <path d="M50 74 h20" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".6"/>
+       <circle cx="60" cy="36" r="20" fill="${SKIN}" ${K()}/>
+       <path d="M50 20 Q60 10 70 18 Q62 16 62 26" fill="none" ${K(3)}/>
+       <circle cx="53" cy="36" r="2.6" fill="${INK}"/><circle cx="67" cy="36" r="2.6" fill="${INK}"/>
+       <path d="M54 44 Q60 49 66 44" fill="none" ${K(3)}/>
+       <circle cx="48" cy="43" r="3.4" fill="#f2a7a0" opacity=".7"/><circle cx="72" cy="43" r="3.4" fill="#f2a7a0" opacity=".7"/>`;
+  }},
+  readingBag: { vb: '0 0 120 120', draw: o => {
+    const c = o.color || '#7aa9de';
+    return smallBag(c, shade(c, -.18), `<path d="M36 80 Q48 74 60 80 Q72 74 84 80 V100 Q72 94 60 100 Q48 94 36 100 Z" fill="#fffaf0" ${K(3)}/><path d="M60 80 V100" ${K(3)}/>`);
+  }},
+  libraryBag: { vb: '0 0 120 120', draw: o => {
+    const c = o.color || '#8cc47e';
+    return `<g transform="rotate(12 70 40)"><rect x="54" y="12" width="34" height="50" rx="3" fill="#e57a6e" ${K()}/><path d="M61 22 H81 M61 30 H76" ${K(3)}/></g>
+      <path d="M32 54 Q32 30 46 30 Q60 30 60 54" fill="none" ${K(4.5)}/>
+      <path d="M60 54 Q60 30 74 30 Q88 30 88 54" fill="none" ${K(4.5)}/>
+      <path d="M20 50 H100 L94 104 Q93 110 87 110 H33 Q27 110 26 104 Z" fill="${c}" ${K()}/>
+      <path d="${starPath(60, 80, 14, 6)}" fill="#fff6c8" ${K(3)}/>`;
+  }},
+  mathsBag: { vb: '0 0 120 120', draw: o => {
+    const c = o.color || '#f4d36b';
+    return smallBag(c, shade(c, -.15), `<text x="60" y="98" text-anchor="middle" font-family="Andika, sans-serif" font-weight="700" font-size="26" fill="${INK}">1+1</text>`);
+  }},
+
+  /* the backpack has 3 layers so packed things can peek out of the top */
+  backpackParts(bp = {}) {
+    const body = bp.color || '#7cc4b9', dark = shade(body, -.2), pocket = bp.pocket || shade(body, .35);
+    const handle = `<path d="M118 64 Q118 22 150 22 Q182 22 182 64" fill="none" ${K(15)}/><path d="M118 64 Q118 22 150 22 Q182 22 182 64" fill="none" stroke="${dark}" stroke-width="7" stroke-linecap="round"/>`;
+    let pocketArt = `<path d="M80 208 Q80 188 100 188 H200 Q220 188 220 208 V280 Q220 298 202 298 H98 Q80 298 80 280 Z" fill="${pocket}" ${K(4.5)}/>
+      <path d="M90 204 H210" stroke="${INK}" stroke-width="3" stroke-dasharray="2 6" stroke-linecap="round"/><path d="M204 200 l8 14" ${K(3.5)}/>`;
+    if (bp.style === 'rainbow') {
+      const cols = ['#e57a6e', '#f0a65a', '#f4d36b', '#8cc47e', '#7aa9de'];
+      pocketArt += cols.map((c, i) => { const r = 52 - i * 8.5; return `<path d="M${150 - r} 288 A${r} ${r} 0 0 1 ${150 + r} 288" fill="none" stroke="${c}" stroke-width="8"/>`; }).join('');
+      pocketArt += `<circle cx="96" cy="286" r="9" fill="#fff" ${K(2.5)}/><circle cx="106" cy="288" r="7" fill="#fff" ${K(2.5)}/><circle cx="204" cy="286" r="9" fill="#fff" ${K(2.5)}/><circle cx="194" cy="288" r="7" fill="#fff" ${K(2.5)}/>`;
+    }
+    const feet = `<rect x="58" y="312" width="34" height="14" rx="6" fill="${dark}" ${K(3)}/><rect x="208" y="312" width="34" height="14" rx="6" fill="${dark}" ${K(3)}/>`;
+    return {
+      closed: handle + feet + `<path d="M40 126 Q40 56 150 56 Q260 56 260 126 V292 Q260 322 230 322 H70 Q40 322 40 292 Z" fill="${body}" ${K(5)}/>
+        <path d="M62 134 Q150 74 238 134" fill="none" stroke="${dark}" stroke-width="10" stroke-linecap="round" opacity=".55"/>
+        <path d="M62 134 Q150 74 238 134" fill="none" stroke="${INK}" stroke-width="3" stroke-dasharray="2 6" stroke-linecap="round"/>
+        <path d="M226 116 l9 20" ${K(5)}/><path d="M60 170 V250" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".35"/>` + pocketArt,
+      back: handle + `<path d="M40 134 Q40 56 150 56 Q260 56 260 134 Z" fill="${dark}" ${K(5)}/>
+        <ellipse cx="150" cy="126" rx="106" ry="27" fill="#4b4150" ${K(4)}/>`,
+      front: feet + `<path d="M40 126 Q150 162 260 126 V292 Q260 322 230 322 H70 Q40 322 40 292 Z" fill="${body}" ${K(5)}/>
+        <path d="M46 131 Q150 166 254 131" fill="none" stroke="${INK}" stroke-width="3" stroke-dasharray="2 6" stroke-linecap="round"/>
+        <path d="M60 180 V250" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".35"/>` + pocketArt
+    };
+  },
+  backpackClosed: { vb: '0 0 300 340', draw: o => ART.backpackParts(o).closed },
+
+  car: { vb: '0 0 420 250', draw: () =>
+    `<path fill-rule="evenodd" d="M24 170 Q24 138 56 134 L94 130 Q122 48 186 44 H286 Q330 44 354 128 L386 136 Q406 140 406 166 V184 Q406 198 392 198 H38 Q24 198 24 184 Z M112 128 Q134 62 186 60 H234 V128 Z" fill="#7aa9de" ${K(5)}/>
+     <path d="M112 128 Q134 62 186 60 H234 V128 Z" fill="#dff0fb" fill-opacity=".22" ${K(4)}/>
+     <path d="M250 60 H284 Q316 60 336 128 H250 Z" fill="#dff0fb" ${K(4)}/>
+     <path d="M242 134 V194" ${K(3)}/><path d="M262 150 h18" ${K(5)}/>
+     <circle cx="394" cy="156" r="7" fill="#f4d36b" ${K(3)}/>
+     <rect x="24" y="146" width="11" height="17" rx="3" fill="#e57a6e" ${K(3)}/>
+     <circle cx="106" cy="198" r="31" fill="#5a524e" ${K(5)}/><circle cx="106" cy="198" r="12" fill="#cfc8bf" ${K(3)}/>
+     <circle cx="326" cy="198" r="31" fill="#5a524e" ${K(5)}/><circle cx="326" cy="198" r="12" fill="#cfc8bf" ${K(3)}/>`
+  },
+  house: { vb: '0 0 320 340', draw: () =>
+    `<rect x="214" y="46" width="32" height="62" fill="#c98b6b" ${K()}/>
+     <path d="M14 158 L160 34 L306 158 Z" fill="#e57a6e" ${K(5)}/>
+     <rect x="40" y="150" width="240" height="180" fill="#f7e2b5" ${K(5)}/>
+     <rect x="62" y="184" width="74" height="62" rx="5" fill="#dff0fb" ${K(4)}/><path d="M99 184 V246 M62 215 H136" ${K(3)}/>
+     <path d="M176 330 V252 Q176 212 214 212 Q252 212 252 252 V330 Z" fill="#6fc2b8" ${K(4)}/>
+     <circle cx="238" cy="278" r="5" fill="#f4d36b" ${K(2.5)}/>
+     <rect x="166" y="326" width="96" height="10" rx="3" fill="#cfc8bf" ${K(3)}/>`
+  },
+  houseDoorOpen: { vb: '0 0 320 340', draw: () =>
+    `<path d="M176 330 V252 Q176 212 214 212 Q252 212 252 252 V330 Z" fill="#f6dc8f" ${K(4)}/>
+     <path d="M176 222 L150 236 V332 L176 330 Z" fill="#6fc2b8" ${K(4)}/>`
+  },
+  houseIcon: { vb: '0 0 120 120', draw: () =>
+    `<path d="M10 58 L60 16 L110 58 Z" fill="#e57a6e" ${K()}/>
+     <rect x="22" y="54" width="76" height="56" fill="#f7e2b5" ${K()}/>
+     <path d="M50 110 V84 Q50 72 60 72 Q70 72 70 84 V110 Z" fill="#6fc2b8" ${K(3.5)}/>`
+  },
+  sun: { vb: '0 0 120 120', draw: () => {
+    let rays = '';
+    for (let i = 0; i < 10; i++) {
+      const a = i * Math.PI / 5, r1 = 34, r2 = i % 2 ? 46 : 52;
+      rays += `<path d="M${(60 + r1 * Math.cos(a)).toFixed(1)} ${(60 + r1 * Math.sin(a)).toFixed(1)} L${(60 + r2 * Math.cos(a)).toFixed(1)} ${(60 + r2 * Math.sin(a)).toFixed(1)}" ${K(5)}/>`;
+    }
+    return rays + `<circle cx="60" cy="60" r="26" fill="#f4d36b" ${K()}/>
+      <circle cx="52" cy="57" r="2.6" fill="${INK}"/><circle cx="68" cy="57" r="2.6" fill="${INK}"/>
+      <path d="M52 67 Q60 73 68 67" fill="none" ${K(3)}/>`;
+  }},
+  moon: { vb: '0 0 100 100', draw: () =>
+    `<path d="M46.7 12.2 A38 38 0 1 0 85.9 62.5 A32 32 0 0 1 46.7 12.2 Z" fill="#f4d36b" ${K()}/>
+     <circle cx="40" cy="58" r="2.6" fill="${INK}"/><path d="M36 70 Q42 74 48 70" fill="none" ${K(2.5)}/>`
+  },
+  star: { vb: '0 0 100 100', draw: () =>
+    `<path d="${starPath(50, 54, 44, 19)}" fill="#f0a65a" ${K()}/>
+     <circle cx="43" cy="52" r="2.6" fill="${INK}"/><circle cx="57" cy="52" r="2.6" fill="${INK}"/>
+     <path d="M44 61 Q50 66 56 61" fill="none" ${K(2.5)}/>`
+  },
+  speaker: { vb: '0 0 100 100', draw: () =>
+    `<path d="M14 38 H30 L52 20 V80 L30 62 H14 Z" fill="#fffaf0" ${K(5)}/>
+     <path d="M64 36 Q74 50 64 64" fill="none" ${K(6)}/><path d="M74 24 Q92 50 74 76" fill="none" ${K(6)}/>`
+  },
+  back: { vb: '0 0 100 100', draw: () =>
+    `<path d="M38 24 L16 46 L38 68" fill="none" ${K(8)}/><path d="M18 46 H60 Q84 46 84 70 V78" fill="none" ${K(8)}/>`
+  },
+  fullscreen: { vb: '0 0 100 100', draw: () =>
+    `<path d="M16 38 V16 H38 M62 16 H84 V38 M84 62 V84 H62 M38 84 H16 V62" fill="none" ${K(8)}/>`
+  },
+  shrink: { vb: '0 0 100 100', draw: () =>
+    `<path d="M16 38 H38 V16 M62 16 V38 H84 M84 62 H62 V84 M38 84 V62 H16" fill="none" ${K(8)}/>`
+  },
+  gear: { vb: '0 0 100 100', draw: () =>
+    `<circle cx="50" cy="50" r="30" fill="none" stroke="${INK}" stroke-width="14" stroke-dasharray="11.8 11.8"/>
+     <circle cx="50" cy="50" r="24" fill="#e9dfcc" ${K(5)}/><circle cx="50" cy="50" r="9" fill="#fffaf0" ${K(4)}/>`
+  },
+  replay: { vb: '0 0 100 100', draw: () =>
+    `<path d="M78 56 A28 28 0 1 1 70 30" fill="none" ${K(8)}/><path d="M54 26 L72 28 L70 10" fill="none" ${K(8)}/>`
+  },
+  tick: { vb: '0 0 100 100', draw: () => `<path d="M18 54 L40 76 L84 26" fill="none" stroke="#4f9a55" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>` },
+  arrow: { vb: '0 0 200 80', draw: () =>
+    `<path d="M10 56 Q90 2 172 40" fill="none" stroke="${INK}" stroke-width="5" stroke-dasharray="4 14" stroke-linecap="round"/>
+     <path d="M150 22 L176 42 L148 56" fill="none" ${K(6)}/>`
+  },
+  table: { vb: '0 0 800 100', draw: () =>
+    `<path d="M70 34 V96 M730 34 V96 M150 34 V82 M650 34 V82" ${K(10)}/>
+     <path d="M70 34 V96 M730 34 V96" stroke="#b98a5e" stroke-width="4" stroke-linecap="round"/>
+     <rect x="8" y="8" width="784" height="30" rx="12" fill="#ddb582" ${K(5)}/>
+     <path d="M40 22 H220 M300 18 H520 M580 24 H760" stroke="#b98a5e" stroke-width="3" stroke-linecap="round"/>`
+  },
+  groundLine: { vb: '0 0 800 16', draw: () => `<path d="M0 8 Q100 2 200 9 T400 8 T600 7 T800 9" fill="none" ${K(4)}/>` },
+
+  /* unpacking spots — each has an "area" (where placed things sit, as % of the picture) */
+  bench: { vb: '0 0 200 170', area: [2, 36], draw: () =>
+    `<rect x="18" y="72" width="164" height="94" fill="#f2e6cf" ${K()}/>
+     <path d="M100 74 V164" ${K(3)}/><circle cx="90" cy="112" r="4.5" fill="${INK}"/><circle cx="110" cy="112" r="4.5" fill="${INK}"/>
+     <path d="M168 60 V38 Q168 28 158 28 H148" fill="none" ${K(6)}/>
+     <rect x="6" y="58" width="188" height="16" rx="4" fill="#d9b07c" ${K()}/>`
+  },
+  basket: { vb: '0 0 200 170', area: [4, 45], draw: () =>
+    `<path d="M24 66 H176 L161 158 Q160 166 152 166 H48 Q40 166 39 158 Z" fill="#e8c992" ${K()}/>
+     <path d="M30 98 H170 M35 128 H165" ${K(3)}/>
+     <path d="M64 70 L68 162 M100 70 V164 M136 70 L132 162" stroke="#b98a5e" stroke-width="3" stroke-linecap="round"/>
+     <rect x="16" y="58" width="168" height="16" rx="6" fill="#d9b07c" ${K()}/>`
+  },
+  shelf: { vb: '0 0 200 170', area: [14, 52], draw: () =>
+    `<path d="M38 126 V156 L66 126" fill="#c49a6c" ${K(3.5)}/><path d="M162 126 V156 L134 126" fill="#c49a6c" ${K(3.5)}/>
+     <rect x="8" y="110" width="184" height="16" rx="4" fill="#d9b07c" ${K()}/>`
+  },
+  hook: { vb: '0 0 200 170', area: [30, 60], draw: () =>
+    `<rect x="16" y="20" width="168" height="22" rx="6" fill="#d9b07c" ${K()}/>
+     <circle cx="30" cy="31" r="3" fill="${INK}"/><circle cx="170" cy="31" r="3" fill="${INK}"/>
+     ${[60, 100, 140].map(x => `<path d="M${x} 42 V64 Q${x} 78 ${x + 12} 78 Q${x + 22} 78 ${x + 22} 66" fill="none" ${K(6)}/>`).join('')}`
+  },
+  toybox: { vb: '0 0 200 170', area: [6, 46], draw: () =>
+    `<path d="M28 82 L42 36 H164 L174 82 Z" fill="#5b8fcf" ${K()}/>
+     <rect x="22" y="80" width="156" height="84" rx="7" fill="#7aa9de" ${K()}/>
+     <path d="${starPath(100, 124, 22, 9)}" fill="#f4d36b" ${K(3)}/>
+     <path d="M22 96 H178" ${K(3)}/>`
+  },
+
+  /* the girls, drawn like the chart (pencil faces, dark hair) */
+  figure: { vb: '0 0 120 200', draw: o => {
+    const face = `<circle cx="51" cy="66" r="2.8" fill="${INK}"/><circle cx="69" cy="66" r="2.8" fill="${INK}"/>
+      <path d="M52 76 Q60 82 68 76" fill="none" ${K(3)}/>
+      <circle cx="45" cy="74" r="3.6" fill="#f2a7a0" opacity=".6"/><circle cx="75" cy="74" r="3.6" fill="#f2a7a0" opacity=".6"/>`;
+    const legs = `<path d="M50 150 V182 M70 150 V182" ${K(4)}/><path d="M42 186 H54 M66 186 H78" ${K(8)}/>`;
+    if (o.kind === 'pigtails') {
+      return legs + `<path d="M44 100 L28 132 M76 100 L92 132" ${K(4)}/>
+        <path d="M44 94 L32 154 H88 L76 94 Z" fill="#a9c7ea" ${K()}/>
+        <path d="M40 112 H80 M37 128 H83 M35 142 H85 M50 96 L46 152 M60 96 V152 M70 96 L74 152" stroke="#5b7fae" stroke-width="2" opacity=".75"/>
+        <path d="M50 94 L60 104 L70 94" fill="#fff" ${K(3)}/>
+        <path d="M36 58 Q18 58 16 80 Q26 74 34 66" fill="${HAIR}" ${K(3)}/><path d="M84 58 Q102 58 104 80 Q94 74 86 66" fill="${HAIR}" ${K(3)}/>
+        <circle cx="34" cy="60" r="4" fill="#e57a6e"/><circle cx="86" cy="60" r="4" fill="#e57a6e"/>
+        <circle cx="60" cy="66" r="26" fill="${SKIN}" ${K()}/>
+        <path d="M34 64 Q34 38 60 38 Q86 38 86 64 Q78 50 60 50 Q42 50 34 64 Z" fill="${HAIR}" ${K(3)}/>` + face;
+    }
+    return legs + `<path d="M32 64 Q30 34 60 34 Q90 34 88 64 L94 118 Q60 126 26 118 Z" fill="${HAIR}" ${K(3)}/>
+      <path d="M44 100 L28 132 M76 100 L92 132" ${K(4)}/>
+      <path d="M46 94 L28 152 H92 L74 94 Z" fill="#ef9ab8" ${K()}/>
+      <path d="M34 140 Q60 148 86 140" fill="none" stroke="#fff" stroke-width="4" opacity=".6"/>
+      <circle cx="60" cy="66" r="26" fill="${SKIN}" ${K()}/>
+      <path d="M35 62 Q38 42 60 42 Q82 42 85 62 Q72 52 60 54 Q48 52 35 62 Z" fill="${HAIR}" ${K(3)}/>` + face;
+  }}
+};
+
+/* wrap an art piece in an <svg>, with the crayon filter */
+function art(name, opts = {}, cls = '') {
+  const a = ART[name];
+  if (!a) return '';
+  return `<svg class="art ${cls}" viewBox="${a.vb}" aria-hidden="true" focusable="false"><g filter="url(#crayon)">${a.draw(opts)}</g></svg>`;
+}
+/* every item drawing goes through here (LATER: real photos — return <img src=item.photo>) */
+function itemArt(item) { return art(item.art, item); }
+function backpackHTML(bp, state, extra = '') {
+  const p = ART.backpackParts(bp);
+  const L = (cls, inner) => `<svg class="art bp-layer ${cls}" viewBox="0 0 300 340" aria-hidden="true"><g filter="url(#crayon)">${inner}</g></svg>`;
+  return `<div class="backpack ${state} ${extra}"><div class="bp-inner">${L('bp-closed', p.closed)}${L('bp-back', p.back)}<div class="bp-peek"></div>${L('bp-front', p.front)}</div></div>`;
+}
+const badge = child => art(child.badge === 'star' ? 'star' : 'moon', {}, 'badge');
+
+/* =====================================================================
+   VOICE — Web Speech, prefers an Australian voice
+   ===================================================================== */
+const Voice = {
+  ok: 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window,
+  voices: [], voice: null, _t: 0,
+  init() {
+    if (!this.ok) return;
+    const load = () => { try { this.voices = speechSynthesis.getVoices() || []; this.choose(); fillVoiceSelect(); } catch (e) {} };
+    load();
+    try { speechSynthesis.addEventListener('voiceschanged', load); } catch (e) { speechSynthesis.onvoiceschanged = load; }
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.stop(); });
+  },
+  norm: l => String(l || '').replace('_', '-').toLowerCase(),
+  choose() {
+    const want = this.norm(CONFIG.voice.lang), v = this.voices, n = this.norm, saved = Store.settings.voiceURI;
+    this.voice = (saved && v.find(x => x.voiceURI === saved)) ||
+      v.find(x => n(x.lang) === want && x.localService) || v.find(x => n(x.lang) === want) ||
+      v.find(x => n(x.lang) === 'en-gb') || v.find(x => n(x.lang).startsWith('en')) || null;
+  },
+  say(text) {
+    if (!this.ok || !text || Store.settings.speech === false) return;
+    try {
+      clearTimeout(this._t);
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      if (this.voice) { u.voice = this.voice; u.lang = this.voice.lang; } else u.lang = CONFIG.voice.lang;
+      u.rate = Store.settings.slow ? CONFIG.voice.slowRate : CONFIG.voice.rate;
+      u.pitch = CONFIG.voice.pitch;
+      // small gap after cancel() — Android Chrome can drop an utterance spoken straight after it
+      this._t = setTimeout(() => { try { speechSynthesis.resume(); speechSynthesis.speak(u); } catch (e) {} }, 80);
+    } catch (e) {}
+  },
+  stop() { try { clearTimeout(this._t); speechSynthesis.cancel(); } catch (e) {} }
+};
+const say = t => Voice.say(t);
+
+/* =====================================================================
+   SOUND — soft effects made with Web Audio (no audio files)
+   ===================================================================== */
+const Sfx = {
+  ctx: null, out: null, nb: null,
+  unlock() {
+    try {
+      if (!this.ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        this.ctx = new AC();
+        const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 4500;
+        const comp = this.ctx.createDynamicsCompressor();
+        this.out = this.ctx.createGain(); this.out.gain.value = 0.55;
+        this.out.connect(lp); lp.connect(comp); comp.connect(this.ctx.destination);
+      }
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+    } catch (e) {}
+  },
+  tone(f, t0, dur, o = {}) {
+    const c = this.ctx, t = c.currentTime + t0, osc = c.createOscillator(), g = c.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(f, t);
+    if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t + dur * .8);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(o.vol ?? .2, t + (o.attack ?? .012));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g); g.connect(this.out); osc.start(t); osc.stop(t + dur + .05);
+  },
+  noise(t0, dur, o = {}) {
+    const c = this.ctx, t = c.currentTime + t0;
+    if (!this.nb) { const n = c.sampleRate; this.nb = c.createBuffer(1, n, n); const d = this.nb.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; }
+    const s = c.createBufferSource(); s.buffer = this.nb;
+    const f = c.createBiquadFilter(); f.type = o.type || 'bandpass'; f.frequency.setValueAtTime(o.f || 1200, t);
+    if (o.fTo) f.frequency.exponentialRampToValueAtTime(o.fTo, t + dur);
+    f.Q.value = o.q ?? 1;
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(o.vol ?? .12, t + (o.attack ?? .01)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(this.out); s.start(t, Math.random() * .5); s.stop(t + dur + .05);
+  },
+  play(name, delay = 0) {
+    if (!this.ctx || Store.settings.sound === false) return;
+    try { (this.sounds[name] || (() => {})).call(this, delay); } catch (e) {}
+  },
+  sounds: {
+    pop(d)   { this.tone(520, d, .14, { to: 760, vol: .14 }); },
+    pick(d)  { this.tone(440, d, .12, { to: 640, vol: .1, type: 'triangle' }); },
+    drop(d)  { this.tone(190, d, .2, { to: 110, vol: .22 }); this.noise(d, .08, { f: 500, vol: .06 }); },
+    tick(d)  { this.tone(880, d, .2, { type: 'triangle', vol: .13 }); this.tone(1318.5, d + .1, .32, { type: 'triangle', vol: .12 }); },
+    nudge(d) { this.tone(392, d, .18, { to: 349, vol: .09, type: 'triangle' }); },
+    zip(d)   { for (let i = 0; i < 11; i++) this.noise(d + i * .032, .028, { f: 2200 + i * 160, q: 5, vol: .12 }); },
+    whoosh(d){ this.noise(d, .45, { type: 'bandpass', f: 300, fTo: 1600, q: .8, vol: .1, attack: .15 }); },
+    bell(d)  { this.tone(659.3, d, .7, { vol: .13 }); this.tone(523.3, d + .32, .9, { vol: .13 }); },
+    cheer(d) {
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, d + i * .12, .55, { type: 'triangle', vol: .13 }));
+      [523.25, 659.25, 783.99].forEach(f => this.tone(f, d + .5, 1.1, { type: 'sine', vol: .07, attack: .05 }));
+      for (let i = 0; i < 9; i++) this.tone(1400 + Math.random() * 1200, d + .55 + Math.random() * 1.2, .25, { vol: .035 });
+      for (let i = 0; i < 70; i++) { const t = .3 + Math.pow(Math.random(), 1.4) * 1.9; this.noise(d + t, .03, { f: 900 + Math.random() * 1800, q: 1.4, vol: .05 * (1 - t / 2.4) + .01 }); }
+    }
+  }
+};
+
+/* =====================================================================
+   DRAG — pointer events, forgiving snap, one finger at a time
+   ===================================================================== */
+const Drag = {
+  active: null,
+  layer: null,
+  attach(el, opts) { el.addEventListener('pointerdown', e => this.down(e, el, opts)); },
+  down(e, el, opts) {
+    if (this.active || (e.button && e.button !== 0) || el.classList.contains('gone') || el.classList.contains('in-bag')) return;
+    e.preventDefault();
+    const st = { el, opts, id: e.pointerId, x0: e.clientX, y0: e.clientY, dragging: false, clone: null, rect: null, near: null };
+    this.active = st;
+    const move = ev => { if (ev.pointerId === st.id) { ev.preventDefault(); this.move(ev, st); } };
+    const up = ev => {
+      if (ev.pointerId !== st.id) return;
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+      this.up(ev, st, ev.type === 'pointercancel');
+    };
+    window.addEventListener('pointermove', move, { passive: false });
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  },
+  centre(st, e) { return [st.rect.left + st.rect.width / 2 + (e.clientX - st.x0), st.rect.top + st.rect.height / 2 + (e.clientY - st.y0)]; },
+  move(e, st) {
+    const dx = e.clientX - st.x0, dy = e.clientY - st.y0;
+    if (!st.dragging) { if (Math.hypot(dx, dy) < 12) return; this.begin(st); }
+    const rot = Math.max(-7, Math.min(7, dx * .02));
+    st.clone.style.transform = `translate(${dx}px, ${dy}px) scale(1.12) rotate(${rot}deg)`;
+    const [cx, cy] = this.centre(st, e);
+    const near = this.find(st, cx, cy, true);
+    if (near !== st.near) { st.near?.el.classList.remove('near'); near?.el.classList.add('near'); st.near = near; }
+  },
+  begin(st) {
+    st.dragging = true;
+    const r = st.rect = st.el.getBoundingClientRect();
+    const c = st.clone = st.el.cloneNode(true);
+    c.classList.remove('wiggle', 'pulse');
+    c.classList.add('drag-clone');
+    Object.assign(c.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+    this.layer.appendChild(c);
+    st.el.classList.add('lifted');
+    Sfx.play('pick');
+    st.opts.onStart?.(st);
+  },
+  /* the right target wins if it's anywhere near; otherwise report a wrong one we're on top of */
+  find(st, cx, cy, acceptOnly) {
+    const hit = (t, m) => { const r = t.el.getBoundingClientRect(); return cx > r.left - m && cx < r.right + m && cy > r.top - m && cy < r.bottom + m ? Math.hypot(cx - (r.left + r.width / 2), cy - (r.top + r.height / 2)) : Infinity; };
+    let best = null, bd = Infinity;
+    const ts = st.opts.targets();
+    for (const t of ts) if (t.accept) { const d = hit(t, t.margin ?? 110); if (d < bd) { bd = d; best = t; } }
+    if (best || acceptOnly) return best;
+    for (const t of ts) if (!t.accept) { const d = hit(t, 0); if (d < bd) { bd = d; best = t; } }
+    return best;
+  },
+  up(e, st, cancelled) {
+    this.active = null;
+    st.near?.el.classList.remove('near');
+    if (!st.dragging) { if (!cancelled) st.opts.onTap?.(st); return; }
+    st.opts.onEnd?.(st);
+    const [cx, cy] = this.centre(st, e);
+    const t = cancelled ? null : this.find(st, cx, cy, false);
+    const from = st.clone.style.transform;
+    if (t && t.accept) {
+      const tr = (t.flyTo ? t.flyTo() : t.el).getBoundingClientRect();
+      const tx = tr.left + tr.width / 2 - (st.rect.left + st.rect.width / 2);
+      const ty = tr.top + tr.height / 2 - (st.rect.top + st.rect.height / 2);
+      const a = st.clone.animate([{ transform: from, opacity: 1 }, { transform: `translate(${tx}px, ${ty}px) scale(${t.shrink ?? .35})`, opacity: t.fade ? 0 : 1 }],
+        { duration: 360, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'forwards' });
+      a.onfinish = () => { st.clone.remove(); t.onDrop(st); };
+    } else {
+      const a = st.clone.animate([{ transform: from }, { transform: 'translate(0px, 0px) scale(1)' }], { duration: 420, easing: 'cubic-bezier(.3,1.3,.5,1)', fill: 'forwards' });
+      a.onfinish = () => { st.clone.remove(); st.el.classList.remove('lifted'); };
+      st.opts.onMiss?.(st, t);
+    }
+  }
+};
+
+/* =====================================================================
+   APP + SCREENS
+   ===================================================================== */
+const S = { screen: null, child: null, mode: null, ctx: { day: 0 }, prompt: () => '', timers: [] };
+const screen = $('#screen');
+const later = (fn, ms) => { const t = setTimeout(fn, ms); S.timers.push(t); return t; };
+
+function setBanner(iconHTML, text) {
+  $('#banner .banner-icon').innerHTML = iconHTML || '';
+  $('#banner .banner-text').textContent = text || '';
+}
+function wiggle(el) { el.classList.remove('wiggle'); void el.offsetWidth; el.classList.add('wiggle'); el.addEventListener('animationend', () => el.classList.remove('wiggle'), { once: true }); }
+function flash(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); el.addEventListener('animationend', () => el.classList.remove(cls), { once: true }); }
+
+function go(name, params = {}) {
+  S.timers.forEach(clearTimeout); S.timers = [];
+  Object.assign(S, params);
+  S.screen = name;
+  S.ctx = { day: currentDay() };
+  $('#btnBack').classList.toggle('invisible', name === 'home');
+  screen.innerHTML = '';
+  if (S.child) document.documentElement.style.setProperty('--accent', S.child.accent || '#a98bd8');
+  SCREENS[name]();
+  const first = screen.firstElementChild; if (first) first.classList.add('enter');
+}
+function back() {
+  Voice.stop();
+  if (S.screen === 'pack' || S.screen === 'unpack') go('mode');
+  else go('home', { child: null });
+}
+
+/* checklist panel styled like the paper chart */
+function chartPanel(child, rows, withDays) {
+  let days = '';
+  if (withDays) {
+    const dayItems = child.items.filter(e => e.days).map(resolveItem);
+    if (dayItems.length) {
+      const list = [];
+      dayItems.forEach(it => it.days.forEach(d => { const i = DAYS.indexOf(String(d).toLowerCase().slice(0, 3)); if (i >= 0) list.push({ i, it }); }));
+      list.sort((a, b) => ((a.i + 6) % 7) - ((b.i + 6) % 7));
+      days = `<div class="days">${list.map((x, n) => `${n ? '<span class="dash"></span>' : ''}<button class="day ${x.i === S.ctx.day ? 'today' : ''}" data-say="${DAY_NAMES[x.i]}: ${x.it.word}"><span class="d">${DAY_SHORT[x.i]}</span><span class="ic">${itemArt(x.it)}</span></button>`).join('')}</div>`;
+    }
+  }
+  return `<aside class="chart">
+    <div class="chart-head"><button class="name-box" data-say="${child.name}">${child.name}${badge(child)}</button><div class="mini-bag">${art('backpackClosed', child.backpack)}</div></div>
+    <ul class="checklist">${rows.map(r => `<li class="row ${r.done ? 'done' : ''}" data-row="${r.id}" data-say="${r.say || r.word}">
+      <span class="ic">${r.icon}</span><span class="word">${r.word}</span>
+      <span class="box"><svg viewBox="0 0 40 40"><path class="tick" d="M7 21 L16 31 L35 6"/></svg></span></li>`).join('')}</ul>${days}
+  </aside>`;
+}
+function tickRow(id) { const r = $(`.row[data-row="${id}"]`, screen); if (r) { r.classList.add('done'); flash(r, 'pop'); } }
+function itemTile(item, cls = '') {
+  return `<div class="item ${cls}" data-id="${item.id}"><div class="item-art">${itemArt(item)}</div><div class="item-word">${item.word}</div></div>`;
+}
+
+const SCREENS = {
+  /* ---------- 1. who's playing ---------- */
+  home() {
+    S.prompt = () => CONFIG.say.home;
+    setBanner(CONFIG.children.map(badge).map(b => `<span style="width:28px;height:28px;display:inline-block">${b}</span>`).join(''), CONFIG.labels.home);
+    screen.innerHTML = `<div class="home">${CONFIG.children.map(c => `
+      <button class="kid-card" data-child="${c.id}" style="--accent:${c.accent}">
+        <span class="name-box">${c.name}${badge(c)}</span>
+        <span class="kid-pics"><span class="fig">${art('figure', { kind: c.figure })}</span><span class="mini-bag">${art('backpackClosed', c.backpack)}</span></span>
+      </button>`).join('')}</div>`;
+    $$('.kid-card', screen).forEach(b => b.addEventListener('click', () => {
+      Sfx.play('pop');
+      go('mode', { child: CONFIG.children.find(c => c.id === b.dataset.child) });
+      say(S.prompt());
+    }));
+  },
+
+  /* ---------- 2. morning or after school ---------- */
+  mode() {
+    const c = S.child, ctx = S.ctx;
+    const extra = itemsFor(c, ctx).filter(i => i.days);
+    S.prompt = () => fill(CONFIG.say.chooseMode, { name: c.name, after: c.afterSay || 'after school' });
+    setBanner(badge(c), `${c.name} · ${CONFIG.labels.choose}`);
+    const P = CONFIG.modes.pack, U = CONFIG.modes.unpack;
+    screen.innerHTML = `<div class="modes">
+      <button class="mode-card" data-mode="pack">
+        <span class="mode-art">${art(P.icon)}</span>
+        <span class="mode-time">${P.time}</span>
+        <span class="mode-word"><span class="ic">${art('backpackClosed', c.backpack)}</span>${P.word}</span>
+        ${extra.length ? `<span class="today-chip">${DAY_SHORT[ctx.day]} ${extra.map(i => `<span class="ic">${itemArt(i)}</span>`).join('')}</span>` : ''}
+      </button>
+      <button class="mode-card" data-mode="unpack">
+        <span class="mode-art">${art('houseIcon')}</span>
+        <span class="mode-time">${c.afterWord || 'After school'}</span>
+        <span class="mode-word"><span class="ic">${art('car')}</span>${U.word}</span>
+      </button></div>`;
+    $$('.mode-card', screen).forEach(b => b.addEventListener('click', () => { Sfx.play('pop'); go(b.dataset.mode); }));
+  },
+
+  /* ---------- 3. morning: pack ---------- */
+  pack() {
+    const c = S.child, ctx = S.ctx, L = CONFIG.labels, Y = CONFIG.say;
+    const items = itemsFor(c, ctx);
+    let prog = getProg('pack');
+    prog.done = prog.done.filter(id => items.some(i => i.id === id));
+    if (prog.done.length >= items.length) prog = getProg('pack', true);
+    Store.save();
+    const resumed = prog.done.length > 0;
+    const isDone = id => prog.done.includes(id);
+    const remaining = () => items.filter(i => !isDone(i.id));
+
+    setBanner(art('backpackClosed', c.backpack), L.pack);
+    S.prompt = () => { const n = remaining()[0]; return n ? fill(Y.packHint, { item: itemSay(n) }) : Y.allPacked; };
+
+    screen.innerHTML = `<div class="game">
+      ${chartPanel(c, items.map(i => ({ id: i.id, icon: itemArt(i), word: i.word, say: itemSay(i), done: isDone(i.id) })), true)}
+      <section class="play pack-play">
+        <div class="bag-zone">${backpackHTML(c.backpack, 'open')}</div>
+        <div class="table-zone"><div class="table-items">${items.map(i => itemTile(i, isDone(i.id) ? 'gone' : '')).join('')}</div><div class="table">${art('table')}</div></div>
+      </section></div>`;
+    $('.table svg', screen).setAttribute('preserveAspectRatio', 'none');
+
+    const bag = $('.backpack', screen), peek = $('.bp-peek', bag);
+    const addPeek = item => {
+      const d = document.createElement('div'); d.className = 'peek';
+      d.style.rotate = `${(peek.children.length % 2 ? 1 : -1) * (6 + peek.children.length * 3)}deg`;
+      d.innerHTML = itemArt(item); peek.appendChild(d);
+      bag.style.setProperty('--fill', peek.children.length);
+    };
+    items.filter(i => isDone(i.id)).forEach(addPeek);
+    bag.addEventListener('click', () => { wiggle(bag); say(S.prompt()); });
+
+    $$('.item', screen).forEach(el => {
+      const item = items.find(i => i.id === el.dataset.id);
+      Drag.attach(el, {
+        targets: () => [{ el: bag, accept: true, margin: 130, flyTo: () => peek, shrink: .4, onDrop: () => packed(item, el) }],
+        onTap: () => { Sfx.play('pop'); wiggle(el); say(cap(itemSay(item))); },
+        onMiss: () => { Sfx.play('nudge'); say(Y.notQuite); }
+      });
+    });
+
+    function packed(item, el) {
+      el.classList.add('gone'); el.classList.remove('lifted');
+      prog.done.push(item.id); Store.save();
+      addPeek(item); flash(bag, 'bump'); tickRow(item.id);
+      Sfx.play('drop'); Sfx.play('tick', .12);
+      if (remaining().length) say(fill(Y.packed, { item: cap(itemSay(item)) }));
+      else finish();
+    }
+    function finish() {
+      setBanner(art('tick'), L.packed);
+      say(Y.allPacked);
+      later(() => { bag.classList.replace('open', 'closed'); flash(bag, 'bump'); Sfx.play('zip'); }, 1100);
+      later(() => celebrate('pack'), 2500);
+    }
+
+    // first words
+    const extra = items.filter(i => i.days && !isDone(i.id));
+    let intro = resumed ? Y.packResume : Y.packStart;
+    if (extra.length) intro += ' ' + fill(Y.todayExtra, { day: DAY_NAMES[ctx.day], item: extra.map(itemSay).join(' and your ') });
+    say(intro);
+  },
+
+  /* ---------- 4. after school: unpack ---------- */
+  unpack() {
+    const c = S.child, ctx = S.ctx, L = CONFIG.labels, Y = CONFIG.say;
+    const items = itemsFor(c, ctx);
+    let prog = getProg('unpack');
+    if (!prog.step) prog.step = 'bringIn';
+    prog.done = prog.done.filter(id => items.some(i => i.id === id));
+    if (prog.step === 'done' || (prog.step === 'putAway' && prog.done.length >= items.length)) { prog = getProg('unpack', true); prog.step = 'bringIn'; }
+    Store.save();
+    const isDone = id => prog.done.includes(id);
+    const remaining = () => items.filter(i => !isDone(i.id));
+    const steps = CONFIG.modes.unpack.steps;
+    const after = s => steps.indexOf(prog.step) > steps.indexOf(s);
+
+    const rows = [];
+    if (steps.includes('bringIn')) rows.push({ id: '_bringIn', icon: art('car'), word: L.bringIn, done: after('bringIn') });
+    if (steps.includes('openBag')) rows.push({ id: '_open', icon: art('backpackClosed', c.backpack), word: L.openBag, done: after('openBag') });
+    items.forEach(i => rows.push({ id: i.id, icon: itemArt(i), word: i.word, say: itemSay(i), done: isDone(i.id) }));
+
+    screen.innerHTML = `<div class="game">${chartPanel(c, rows, false)}<section class="play unpack-play"></section></div>`;
+    const play = $('.unpack-play', screen);
+
+    const nextStep = () => { const i = steps.indexOf(prog.step); prog.step = steps[i + 1] || 'done'; Store.save(); };
+
+    /* 4a. bag in the car → drag into the house */
+    function outside() {
+      setBanner(art('car'), L.bringInBanner);
+      S.prompt = () => Y.bringIn;
+      play.innerHTML = `<div class="outside enter">
+        <div class="ground-line">${art('groundLine')}</div>
+        <div class="sky-sun">${art('sun')}</div>
+        <div class="hint-arrow">${art('arrow')}</div>
+        <div class="scene">
+          <div class="car-wrap"><div class="bag-item" data-say="bag">${backpackHTML(c.backpack, 'closed')}</div><div class="car">${art('car')}</div></div>
+          <div class="house" data-say="house">${art('house')}<svg class="art door-open" viewBox="0 0 320 340" aria-hidden="true"><g filter="url(#crayon)">${ART.houseDoorOpen.draw()}</g></svg></div>
+        </div></div>`;
+      $('.ground-line svg', play).setAttribute('preserveAspectRatio', 'none');
+      const bagEl = $('.bag-item', play), house = $('.house', play);
+      house.addEventListener('click', () => { wiggle(house); say(Y.bringIn); });
+      Drag.attach(bagEl, {
+        targets: () => [{ el: house, accept: true, margin: 120, flyTo: () => $('.door-open', house), shrink: .3, fade: true, onDrop: () => {
+          house.classList.add('opened'); bagEl.classList.add('gone');
+          Sfx.play('bell'); tickRow('_bringIn'); nextStep();
+          later(() => { Sfx.play('whoosh'); inside(true); }, 1100);
+        } }],
+        onStart: () => { const a = $('.hint-arrow', play); if (a) a.style.opacity = '.25'; },
+        onTap: () => { Sfx.play('pop'); say(Y.bringIn); },
+        onMiss: () => { Sfx.play('nudge'); say(Y.bringIn); }
+      });
+      say(Y.bringIn);
+    }
+
+    /* 4b. inside: open the bag, then put each thing in its spot */
+    function inside(speak) {
+      const spotIds = [...new Set(items.map(i => CONFIG.spots[i.spot] ? i.spot : Object.keys(CONFIG.spots)[0]))];
+      const open = prog.step !== 'openBag';
+      play.innerHTML = `<div class="room enter">
+        <div class="floor-line">${art('groundLine')}</div>
+        <div class="spots">${spotIds.map(id => { const sp = CONFIG.spots[id], a = ART[sp.art] || ART.shelf; return `
+          <button class="spot" data-spot="${id}" data-say="${sp.word}"><span class="spot-art">${art(sp.art)}<span class="spot-items" style="top:${a.area[0]}%;height:${a.area[1] - a.area[0]}%"></span></span><span class="spot-word">${sp.word}</span></button>`; }).join('')}</div>
+        <div class="floor-row">${backpackHTML(c.backpack, open ? 'open' : 'closed pulse')}<div class="floor-items">${items.map(i => itemTile(i, isDone(i.id) ? 'gone' : (open ? '' : 'in-bag'))).join('')}</div></div>
+      </div>`;
+      $('.floor-line svg', play).setAttribute('preserveAspectRatio', 'none');
+      const bag = $('.backpack', play);
+      const spotEl = id => $(`.spot[data-spot="${id}"]`, play);
+      const placeIn = item => { const box = $('.spot-items', spotEl(item.spot) || $('.spot', play)); const d = document.createElement('div'); d.className = 'placed'; d.innerHTML = itemArt(item); box.appendChild(d); };
+      items.filter(i => isDone(i.id)).forEach(placeIn);
+      $$('.spot', play).forEach(s => s.addEventListener('click', () => { wiggle(s); say(CONFIG.spots[s.dataset.spot].word); }));
+
+      const hint = () => { const n = remaining()[0]; return n ? fill(Y.putHint, { item: itemSay(n), spot: spotOf(n).say }) : Y.allUnpacked; };
+
+      if (!open) {
+        setBanner(art('backpackClosed', c.backpack), L.openBanner);
+        S.prompt = () => Y.openBag;
+        bag.addEventListener('click', function opener() {
+          bag.removeEventListener('click', opener);
+          bag.classList.remove('pulse'); bag.classList.replace('closed', 'open'); flash(bag, 'bump');
+          Sfx.play('zip'); tickRow('_open'); nextStep();
+          $$('.floor-items .item.in-bag', play).forEach((el, n) => later(() => { el.classList.add('pop-out'); el.classList.remove('in-bag'); Sfx.play('pop'); }, 300 + n * 180));
+          later(startPutAway, 400 + items.length * 180);
+        });
+        if (speak) say(Y.openBag);
+      } else startPutAway(speak);
+
+      function startPutAway(speak = true) {
+        setBanner(art('houseIcon'), L.putAway);
+        S.prompt = hint;
+        if (speak) say(Y.putAway + ' ' + hint());
+        bag.addEventListener('click', () => { wiggle(bag); say(hint()); });
+      }
+
+      $$('.floor-items .item', play).forEach(el => {
+        const item = items.find(i => i.id === el.dataset.id);
+        const sp = spotOf(item);
+        Drag.attach(el, {
+          targets: () => $$('.spot', play).map(s => ({
+            el: s, accept: s.dataset.spot === item.spot, margin: 70, shrink: .45,
+            flyTo: () => $('.spot-items', s),
+            onDrop: () => placed(item, el)
+          })),
+          onStart: () => spotEl(item.spot)?.classList.add('glow'),
+          onEnd: () => spotEl(item.spot)?.classList.remove('glow'),
+          onTap: () => { Sfx.play('pop'); wiggle(el); spotEl(item.spot) && flash(spotEl(item.spot), 'wiggle'); say(fill(Y.tapItem, { item: cap(itemSay(item)), spot: sp.say })); },
+          onMiss: (st, wrong) => {
+            Sfx.play('nudge');
+            say(fill(Y.wrongSpot, { item: itemSay(item), spot: sp.say }));
+            const right = spotEl(item.spot);
+            if (right) { right.classList.add('glow'); later(() => right.classList.remove('glow'), 1800); }
+          }
+        });
+      });
+
+      function placed(item, el) {
+        el.classList.add('gone'); el.classList.remove('lifted');
+        prog.done.push(item.id); Store.save();
+        placeIn(item); tickRow(item.id);
+        Sfx.play('drop'); Sfx.play('tick', .12);
+        if (remaining().length) say(fill(Y.placed, { item: cap(itemSay(item)), spot: spotOf(item).say }));
+        else {
+          nextStep();
+          setBanner(art('tick'), L.unpacked);
+          say(Y.allUnpacked);
+          later(() => { bag.classList.replace('open', 'closed'); Sfx.play('zip'); }, 900);
+          later(() => celebrate('unpack'), 2200);
+        }
+      }
+    }
+
+    if (prog.step === 'bringIn' && steps.includes('bringIn')) outside();
+    else { if (prog.step === 'bringIn') nextStep(); inside(true); }
+  }
+};
+
+/* ---------- 5. celebration ---------- */
+function celebrate(mode) {
+  const c = S.child, L = CONFIG.labels;
+  Store.data.history.push({ date: todayKey(), child: c.id, mode, day: DAYS[S.ctx.day], t: Date.now() });
+  delete Store.data.progress[progKey(mode)];
+  Store.save();
+  const ov = $('#celebrate');
+  $('.cele-badge', ov).innerHTML = badge(c);
+  $('.cele-title', ov).textContent = `${L.hooray}, ${c.name}!`;
+  $('.cele-sub', ov).innerHTML = `<span class="ic">${art('backpackClosed', c.backpack)}</span>${mode === 'pack' ? L.packed : L.unpacked}`;
+  $('#celeAgain').innerHTML = `${art('replay')}${L.play}`;
+  $('#celeDone').innerHTML = `${art('tick')}${L.done}`;
+  ov.hidden = false;
+  Sfx.play('cheer');
+  setTimeout(() => say(fill(mode === 'pack' ? CONFIG.say.cheerPack : CONFIG.say.cheerUnpack, { name: c.name })), 700);
+  Confetti.start();
+  S.prompt = () => fill(mode === 'pack' ? CONFIG.say.cheerPack : CONFIG.say.cheerUnpack, { name: c.name });
+  $('#celeAgain').onclick = () => { closeCele(); Sfx.play('pop'); go(mode); };
+  $('#celeDone').onclick = () => { closeCele(); Sfx.play('pop'); go('home', { child: null }); say(CONFIG.say.home); };
+}
+function closeCele() { $('#celebrate').hidden = true; Confetti.stop(); }
+
+const Confetti = {
+  raf: 0, parts: [],
+  start() {
+    const cv = $('#confetti'), dpr = Math.min(2, devicePixelRatio || 1);
+    cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+    const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cols = ['#e57a6e', '#f0a65a', '#f4d36b', '#8cc47e', '#7aa9de', '#a98bd8', '#ef9ab8'];
+    const n = reduceMotion ? 18 : 70;
+    this.parts = Array.from({ length: n }, (_, i) => ({
+      x: Math.random() * innerWidth, y: -20 - Math.random() * innerHeight * .9,
+      vy: 1.2 + Math.random() * 1.6, sway: Math.random() * Math.PI * 2, sw: .6 + Math.random(),
+      r: 7 + Math.random() * 9, rot: Math.random() * 6, vr: (Math.random() - .5) * .06,
+      c: cols[i % cols.length], k: i % 3
+    }));
+    const t0 = performance.now();
+    const step = t => {
+      const age = (t - t0) / 1000;
+      g.clearRect(0, 0, innerWidth, innerHeight);
+      g.lineWidth = 2; g.strokeStyle = 'rgba(59,52,49,.55)';
+      for (const p of this.parts) {
+        p.y += p.vy; p.sway += .02; p.x += Math.sin(p.sway) * p.sw; p.rot += p.vr;
+        if (p.y > innerHeight + 30 && age < 4) { p.y = -20; p.x = Math.random() * innerWidth; }
+        g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = p.c; g.beginPath();
+        if (p.k === 0) { for (let i = 0; i < 10; i++) { const rr = i % 2 ? p.r * .45 : p.r, a = -Math.PI / 2 + i * Math.PI / 5; g.lineTo(rr * Math.cos(a), rr * Math.sin(a)); } g.closePath(); }
+        else if (p.k === 1) g.arc(0, 0, p.r * .6, 0, Math.PI * 2);
+        else { g.ellipse(0, 0, p.r * .9, p.r * .4, 0, 0, Math.PI * 2); }
+        g.fill(); g.stroke(); g.restore();
+      }
+      if (age < 9) this.raf = requestAnimationFrame(step); else g.clearRect(0, 0, innerWidth, innerHeight);
+    };
+    cancelAnimationFrame(this.raf); this.raf = requestAnimationFrame(step);
+  },
+  stop() { cancelAnimationFrame(this.raf); const cv = $('#confetti'); cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); }
+};
+
+/* ---------- grown-up settings ---------- */
+function fillVoiceSelect() {
+  const sel = $('#voiceSel'); if (!sel) return;
+  const en = Voice.voices.filter(v => Voice.norm(v.lang).startsWith('en'));
+  sel.innerHTML = `<option value="">Automatic${Voice.voice ? ` (${Voice.voice.name})` : ''}</option>` +
+    en.map(v => `<option value="${v.voiceURI.replace(/"/g, '&quot;')}">${v.name} — ${v.lang}</option>`).join('');
+  sel.value = Store.settings.voiceURI || '';
+  if (!Voice.ok) sel.innerHTML = '<option>Speech not available on this browser</option>';
+}
+function openGrown() {
+  const ov = $('#grownup'), st = Store.settings, today = new Date().getDay(), cur = currentDay();
+  const realToday = !(st.dayOverride && st.dayOverride.date === todayKey());
+  $('#dayChips').innerHTML = `<button class="chip ${realToday ? 'on' : ''}" data-day="auto">Today (${DAY_SHORT[today]})</button>` +
+    [1, 2, 3, 4, 5, 6, 0].map(d => `<button class="chip ${!realToday && cur === d ? 'on' : ''}" data-day="${d}">${DAY_SHORT[d]}</button>`).join('');
+  $('#rateChips').innerHTML = `<button class="chip ${!st.slow ? 'on' : ''}" data-slow="0">Normal</button><button class="chip ${st.slow ? 'on' : ''}" data-slow="1">Slower</button>`;
+  $('#soundChips').innerHTML = `<button class="chip ${st.speech !== false ? 'on' : ''}" data-t="speech">Talking</button><button class="chip ${st.sound !== false ? 'on' : ''}" data-t="sound">Sound effects</button>`;
+  fillVoiceSelect();
+  ov.hidden = false;
+}
+function closeGrown() {
+  $('#grownup').hidden = true;
+  if (S.screen === 'pack' || S.screen === 'unpack' || S.screen === 'mode') go(S.screen);
+}
+function bindGrown() {
+  const ov = $('#grownup');
+  ov.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (e.target === ov) return closeGrown();
+    if (!b) return;
+    const st = Store.settings;
+    if (b.dataset.day) { st.dayOverride = b.dataset.day === 'auto' ? null : { date: todayKey(), day: +b.dataset.day }; Store.save(); openGrown(); }
+    else if (b.dataset.slow) { st.slow = b.dataset.slow === '1'; Store.save(); openGrown(); }
+    else if (b.dataset.t) { st[b.dataset.t] = st[b.dataset.t] === false; Store.save(); openGrown(); }
+    else if (b.id === 'voiceTest') { Sfx.unlock(); say(`Hi ${CONFIG.children.map(c => c.name).join(' and ')}! Let's pack your bags.`); }
+    else if (b.id === 'resetToday') { Store.data.progress = {}; Store.save(); b.textContent = 'Done ✓'; }
+    else if (b.id === 'closeGrown') closeGrown();
+  });
+  $('#voiceSel').addEventListener('change', e => { Store.settings.voiceURI = e.target.value || null; Store.save(); Voice.choose(); });
+}
+
+/* ---------- fullscreen ---------- */
+const fsOK = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const fsOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function toggleFS() {
+  try {
+    if (fsOn()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else { const el = document.documentElement; const p = (el.requestFullscreen || el.webkitRequestFullscreen).call(el, { navigationUI: 'hide' }); p && p.catch && p.catch(() => {}); }
+  } catch (e) {}
+}
+function updateFS() {
+  const b = $('#btnFull');
+  const standaloneFull = matchMedia('(display-mode: fullscreen)').matches && !fsOn();
+  b.style.display = fsOK() && !standaloneFull ? '' : 'none';
+  b.innerHTML = art(fsOn() ? 'shrink' : 'fullscreen');
+}
+
+/* ---------- start ---------- */
+function boot() {
+  Store.load();
+  Drag.layer = $('#drag-layer');
+  $('#btnBack').innerHTML = art('back');
+  $('#btnSay').innerHTML = `${art('speaker')}<span>${CONFIG.labels.again}</span>`;
+  $('#btnGrown').innerHTML = art('gear');
+  updateFS();
+  document.addEventListener('fullscreenchange', updateFS);
+  document.addEventListener('webkitfullscreenchange', updateFS);
+
+  // sound can only start after a touch
+  const unlock = () => { Sfx.unlock(); $('#btnSay').classList.remove('invite'); };
+  document.addEventListener('pointerdown', unlock, { capture: true });
+
+  $('#btnBack').addEventListener('click', () => { Sfx.play('pop'); back(); });
+  $('#btnSay').addEventListener('click', () => { flash($('#btnSay'), 'wiggle'); say(S.prompt()); });
+  $('#btnFull').addEventListener('click', toggleFS);
+  $('#btnGrown').addEventListener('click', openGrown);
+  bindGrown();
+
+  // tap anything with a name to hear it
+  screen.addEventListener('click', e => {
+    const el = e.target.closest('[data-say]');
+    if (!el || el.classList.contains('bag-item') || el.classList.contains('house') || el.classList.contains('spot')) return;
+    Sfx.play('pop'); wiggle(el); say(el.dataset.say);
+  });
+
+  // no long-press menus, no pinch, no double-tap zoom
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1 || Drag.active) e.preventDefault(); }, { passive: false });
+
+  Voice.init();
+  go('home', { child: null });
+
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+  }
+}
+boot();
+})();
+</script>
+</body>
+</html>
