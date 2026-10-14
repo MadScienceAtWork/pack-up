@@ -26,7 +26,8 @@
    decoys   : silly things hiding in the house that DON'T go in the bag
               fun  = what it does when tapped (strum bubbles squeak duck spin clang boing blub)
    sillyCount : how many silly things hide each game (grown-up menu can change it)
-   spots    : where things go when unpacking
+   spots    : where things live in the house when unpacking
+   surprises: silly things that pop out of the bag when it is opened
    After editing, bump CACHE in sw.js so the installed app picks up the change.
    ===================================================================== */
 const CONFIG = {
@@ -39,7 +40,7 @@ const CONFIG = {
       name: "Luna",
       badge: "moon",
       accent: "#f29bb8",
-      look: { hair: "#d6ae6f", hairDark: "#a77d47", style: "pigtails", dress: "#f29bb8", freckles: true, height: 1 },
+      look: { hair: "#9e6b3d", hairDark: "#83593a", style: "pigtails", dress: "#f29bb8", freckles: true, height: 1 },
       afterWord: "After school",
       fromWord: "school",
       backpack: { color: "#7cc47e", pocket: "#d8f0cd", deco: "rainbow" },
@@ -75,12 +76,12 @@ const CONFIG = {
     bottle:     { word: "water bottle",      art: "bottle",     spot: "bench",  color: "#7aa9de", hide: ["kitchen", "table"] },
     lunch:      { word: "lunch box",         art: "lunchbox",   spot: "bench",  color: "#e5675c", hide: ["kitchen", "table"] },
     clothes:    { word: "change of clothes", art: "clothes",    spot: "basket",                   hide: ["bedroom", "bathroom"] },
-    sunscreen:  { word: "sunscreen",         art: "sunscreen",  spot: "shelf",                    hide: ["bathroom", "bedroom"] },
+    sunscreen:  { word: "sunscreen",         art: "sunscreen",  spot: "sink",                     hide: ["bathroom", "bedroom"] },
     hat:        { word: "hat",               art: "hat",        spot: "hook",   color: "#f4d36b", hide: ["bedroom", "play"] },
     toy:        { word: "toy",               art: "doll",       spot: "toybox",                   hide: ["play", "bedroom"] },
-    readingBag: { word: "reading bag",       art: "readingBag", spot: "shelf",  color: "#7aa9de", hide: ["books", "table"] },
-    libraryBag: { word: "library bag",       art: "libraryBag", spot: "shelf",  color: "#8cc47e", hide: ["books", "play"] },
-    mathsBag:   { word: "maths bag",         art: "mathsBag",   spot: "shelf",  color: "#f4d36b", hide: ["table", "books"] }
+    readingBag: { word: "reading bag",       art: "readingBag", spot: "bookshelf",  color: "#7aa9de", hide: ["books", "table"] },
+    libraryBag: { word: "library bag",       art: "libraryBag", spot: "bookshelf",  color: "#8cc47e", hide: ["books", "play"] },
+    mathsBag:   { word: "maths bag",         art: "mathsBag",   spot: "bookshelf",  color: "#f4d36b", hide: ["table", "books"] }
   },
 
   decoys: {
@@ -96,12 +97,20 @@ const CONFIG = {
 
   rooms: { bedroom: "bedroom", bathroom: "bathroom", play: "play area", kitchen: "kitchen", table: "table", books: "book shelf" },
 
+  // where things live in the house when unpacking (bench sink basket hook toybox bookshelf)
   spots: {
-    bench:  { word: "kitchen bench",  art: "bench" },
-    basket: { word: "washing basket", art: "basket" },
-    shelf:  { word: "shelf",          art: "shelf" },
-    hook:   { word: "hook",           art: "hook" },
-    toybox: { word: "toy box",        art: "toybox" }
+    bench:     { word: "kitchen bench" },
+    sink:      { word: "bathroom sink" },
+    basket:    { word: "washing basket" },
+    hook:      { word: "hook" },
+    toybox:    { word: "toy box" },
+    bookshelf: { word: "book shelf" }
+  },
+
+  // silly things that pop out when the bag is opened (one at random; delete any you don't want)
+  surprises: {
+    kangaroo: "kangaroo!", koala: "koala!", frog: "frog!", chicken: "chicken!",
+    puppy: "puppy!", penguin: "penguin!", butterflies: "butterflies!", elephant: "elephant!"
   },
 
   modes: {
@@ -118,7 +127,8 @@ const CONFIG = {
     drive: "Tap the car to drive home",
     bringIn: "Bring your bag inside",
     openBag: "Tap your bag to open it",
-    putAway: "Put things away",
+    putAway: "Put things where they live",
+    surprise: "Surprise!",
     unpacked: "All unpacked!",
     cellDrive: "drive home",
     cellBring: "bring in",
@@ -328,28 +338,40 @@ svg.art { display: block; width: 100%; height: 100%; overflow: visible; }
 .girl-out { position: absolute; z-index: 4; bottom: 9%; aspect-ratio: 120/210; }
 .girl-out.hidden { visibility: hidden; }
 
-/* ---------- unpack: inside ---------- */
-.room { position: absolute; inset: 0; border: var(--line); border-radius: var(--wob); overflow: hidden; display: grid; grid-template-rows: 1.1fr 1fr;
-  background: linear-gradient(to bottom, #fbf3e3 0%, #f6ead2 58%, #e3c79c 58%, #d9bb8c 100%); box-shadow: 6px 7px 0 var(--shadow); }
-.room .floor-line { position: absolute; left: 0; right: 0; top: 57%; height: 14px; pointer-events: none; }
-.spots { position: relative; display: flex; justify-content: space-around; align-items: flex-end; gap: 10px; padding: 12px 14px 0; }
-.spot { position: relative; width: clamp(128px, 15vw, 200px); display: grid; justify-items: center; padding: 6px; border-radius: 24px; transition: transform .2s, background .2s; }
-.spot .spot-art { width: 100%; aspect-ratio: 200/170; position: relative; }
-.spot .spot-word { font-size: clamp(16px, 1.8vw, 22px); text-align: center; line-height: 1.05; margin-top: 2px; }
-.spot .spot-items { position: absolute; left: 6%; right: 6%; display: flex; justify-content: center; align-items: flex-end; pointer-events: none; }
-.spot .spot-items .placed { width: 38%; aspect-ratio: 1; margin: 0 -5%; animation: peekin .35s ease-out both; }
-.spot.glow { background: rgba(255,246,214,.85); box-shadow: 0 0 0 5px var(--glow), 0 0 30px 10px var(--glow); animation: glowpulse 1.2s ease-in-out infinite; }
-@keyframes glowpulse { 50% { box-shadow: 0 0 0 8px var(--glow), 0 0 40px 16px var(--glow); } }
-.spot.near { transform: scale(1.08); }
-.floor-row { position: relative; display: flex; align-items: center; gap: 2%; padding: 6px 3% 10px; min-height: 0; }
-.floor-row .backpack { height: 92%; max-height: 270px; flex: 0 0 auto; }
-.floor-items { flex: 1; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px 10px; }
-.item { position: relative; width: var(--tile, 130px); display: grid; grid-template-rows: calc(var(--tile, 130px) * .82) auto; justify-items: center; align-items: end; padding: 4px; border-radius: 22px; touch-action: none; }
-.floor-items .item { --tile: clamp(100px, min(11vw, 17vh), 140px); }
-.item .item-art { width: 92%; height: 100%; }
-.item .item-word { font-size: clamp(15px, 1.7vw, 20px); line-height: 1.02; text-align: center; padding: 1px 6px; background: rgba(255,251,242,.85); border-radius: 8px; }
-.item.lifted, .item.gone { visibility: hidden; }
-.item.in-bag { opacity: 0; pointer-events: none; }
+/* ---------- unpack: inside the house ---------- */
+.unpack-play > .pack-main { height: 100%; }
+.game.indoors .cell.step { display: none; }
+.zone { position: absolute; border-radius: 18px; transition: background .2s; }
+.zone.glow { background: rgba(255,246,200,.35); box-shadow: 0 0 0 6px var(--glow), 0 0 30px 12px var(--glow); animation: glowpulse 1.2s ease-in-out infinite; z-index: 1; }
+.zone.near { background: rgba(255,246,200,.6); box-shadow: 0 0 0 8px var(--glow), 0 0 40px 16px var(--glow); z-index: 1; }
+.zone.glow-once { animation: glowonce .7s ease-out; }
+@keyframes glowonce { 30% { background: rgba(255,246,200,.6); box-shadow: 0 0 0 8px var(--glow); } }
+@keyframes glowpulse { 50% { box-shadow: 0 0 0 9px var(--glow), 0 0 44px 18px var(--glow); } }
+.zone-label { position: absolute; left: 50%; top: -4px; transform: translate(-50%, -100%) rotate(-2deg); white-space: nowrap; font-size: clamp(13px, 1.5cqw, 18px);
+  padding: 0 8px; background: #fff; border: 2.5px solid var(--ink); border-radius: 5px; box-shadow: 3px 3px 0 var(--shadow); opacity: 0; transition: opacity .2s; pointer-events: none; }
+.zone.glow .zone-label, .zone.near .zone-label { opacity: 1; }
+.zone-items { position: absolute; display: flex; justify-content: center; align-items: flex-end; pointer-events: none; z-index: 2; }
+.zone-items .placed { height: 100%; aspect-ratio: 1; margin: 0 -1.2%; animation: peekin .35s ease-out both; }
+.unpack-zone .pile { position: absolute; left: 0; right: 0; top: 0; bottom: 48%; display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-end; gap: 2px; z-index: 3; }
+.pile-item { width: clamp(76px, 7vw, 104px); aspect-ratio: 1; touch-action: none; border-radius: 20%; }
+.pile-item.lifted, .pile-item.gone { visibility: hidden; }
+.pile-item.in-bag { opacity: 0; pointer-events: none; }
+.unpack-zone .backpack { height: 42%; }
+.unpack-zone .mat { position: absolute; left: 6%; right: 6%; bottom: 3%; height: 3.5%; background: #d9845f; border: 3px solid var(--ink); border-radius: 8px; box-shadow: 4px 4px 0 var(--shadow); }
+
+/* bag surprises */
+.critter { pointer-events: none; z-index: 5; }
+.critter .balloon { position: absolute; left: 66%; bottom: 57%; width: 40%; aspect-ratio: 60/150; animation: sway 1.4s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+@keyframes sway { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+.zz { font: 700 34px var(--font); color: var(--ink); }
+.flap svg { animation: flapping .16s ease-in-out infinite alternate; }
+@keyframes flapping { from { transform: rotate(-6deg); } to { transform: rotate(6deg) translateY(-4%); } }
+.wag .tail { transform-box: fill-box; transform-origin: 0% 100%; animation: wagging .2s ease-in-out infinite alternate; }
+@keyframes wagging { from { transform: rotate(-18deg); } to { transform: rotate(18deg); } }
+.flutter svg { animation: flutter .13s ease-in-out infinite alternate; }
+@keyframes flutter { to { transform: scaleX(.3); } }
+.ears .ear { transform-box: fill-box; transform-origin: 0% 50%; animation: earflap .15s ease-in-out infinite alternate; }
+@keyframes earflap { to { transform: scaleX(.7) rotate(-6deg); } }
 
 /* ---------- drag, hints, bubbles, fx ---------- */
 #drag-layer, #fx-layer { position: fixed; inset: 0; pointer-events: none; }
@@ -418,13 +440,11 @@ svg.art { display: block; width: 100%; height: 100%; overflow: visible; }
   .bag-zone .girl { height: calc(80% * var(--gh, 1)); }
   .bag-zone .backpack { height: 58%; }
   .bag-zone .door { right: 8%; }
-  .room { grid-template-rows: 1fr 1fr; }
-  .spot { width: clamp(128px, 21vw, 190px); }
-  .floor-items .item { --tile: clamp(100px, 15vw, 136px); }
-  .floor-row .backpack { height: 70%; }
+  .unpack-zone .pile { bottom: 52%; }
+  .unpack-zone .backpack { height: 48%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pulse, .spot.glow, .cele-badge, .cele-fig, .car-wrap.tapme .car { animation: none !important; }
+  .pulse, .zone.glow, .cele-badge, .cele-fig, .car-wrap.tapme .car { animation: none !important; }
 }
 </style>
 </head>
@@ -796,14 +816,18 @@ const ART = {
     <!-- bedroom -->
     <path d="M226 98 H242 Q238 140 246 190 H226 Z" fill="#f7b6c9" ${K(3.5)}/><path d="M314 98 H298 Q302 140 294 190 H314 Z" fill="#f7b6c9" ${K(3.5)}/>
     <rect x="240" y="106" width="60" height="74" rx="4" fill="#dff0fb" ${K(4)}/><path d="M270 106 V180 M240 143 H300" ${K(3)}/>
-    <path d="${starPath(150, 130, 14, 6)}" fill="#f4d36b" ${K(3)}/><path d="${starPath(186, 160, 9, 4)}" fill="#f4d36b" ${K(3)}/>
+    <rect x="76" y="112" width="128" height="14" rx="4" fill="#d9b07c" ${K(4)}/><circle cx="84" cy="119" r="2.5" fill="${INK}"/><circle cx="196" cy="119" r="2.5" fill="${INK}"/>
+    ${[104, 140, 176].map(x => `<path d="M${x} 126 V140 Q${x} 150 ${x + 8} 150 Q${x + 15} 150 ${x + 15} 142" fill="none" ${K(5)}/>`).join('')}
     <path d="M22 322 V212 Q22 196 38 196 H46 Q62 196 62 212 V322" fill="#d6ae7c" ${K(5)}/>
     <rect x="40" y="254" width="200" height="38" rx="8" fill="#fff8ec" ${K(5)}/>
     <rect x="58" y="232" width="54" height="26" rx="11" fill="#fff" ${K(4)}/>
     <path d="M100 250 H232 Q242 250 242 260 V292 Q170 302 100 292 Z" fill="#a98bd8" ${K(5)}/>
     <circle cx="140" cy="272" r="4" fill="#fff"/><circle cx="176" cy="266" r="4" fill="#fff"/><circle cx="210" cy="276" r="4" fill="#fff"/>
     <path d="M52 292 V322 M228 292 V322" ${K(7)}/>
-    <ellipse cx="282" cy="320" rx="42" ry="6" fill="#f0a65a" ${K(4)}/>
+    <path d="M252 276 H322 L314 316 Q313 322 307 322 H267 Q261 322 260 316 Z" fill="#e8c992" ${K(4.5)}/>
+    <path d="M256 298 H318" ${K(3)}/><path d="M276 280 L278 320 M292 280 V320 M308 280 L306 320" stroke="#b98a5e" stroke-width="3" stroke-linecap="round"/>
+    <path d="M300 270 Q304 256 316 260 Q312 268 306 272 Z" fill="#7aa9de" ${K(3)}/>
+    <rect x="246" y="268" width="82" height="11" rx="4" fill="#d9b07c" ${K(4)}/>
 
     <!-- bathroom -->
     <path d="M340 206 H660" stroke="#b5dbe0" stroke-width="4"/>
@@ -823,8 +847,8 @@ const ART = {
     <path d="M934 160 L950 134 M930 160 L914 134" ${K(4)}/>
     <path d="M878 322 L932 158 L986 322 Z" fill="#f4d36b" ${K(5)}/><path d="M898 266 H966" stroke="#e5675c" stroke-width="7"/>
     <path d="M914 322 L932 250 L950 322 Z" fill="#f0a65a" ${K(4)}/>
-    <rect x="684" y="262" width="112" height="60" fill="#7aa9de" ${K(5)}/><path d="M740 262 V322" ${K(4)}/>
-    <rect x="694" y="292" width="20" height="20" fill="#f4d36b" ${K(3)}/><rect x="716" y="298" width="16" height="14" fill="#e5675c" ${K(3)}/><circle cx="768" cy="300" r="12" fill="#8cc47e" ${K(3)}/>
+    <path d="M690 266 L702 230 H784 L792 266 Z" fill="#6c9bd6" ${K(4)}/>
+    <rect x="684" y="262" width="112" height="60" rx="5" fill="#7aa9de" ${K(5)}/><path d="${starPath(740, 294, 15, 6)}" fill="#f4d36b" ${K(3)}/>
     <ellipse cx="818" cy="320" rx="58" ry="7" fill="#8cc47e" ${K(4)}/>
 
     <!-- kitchen -->
@@ -901,26 +925,85 @@ const ART = {
     <g class="hdoor"><path d="M176 330 V252 Q176 212 214 212 Q252 212 252 252 V330 Z" fill="#6fc2b8" ${K(4.5)}/><circle cx="238" cy="278" r="5" fill="#f4d36b" ${K(3)}/></g>
     <rect x="166" y="326" width="96" height="10" rx="3" fill="#cfc8bf" ${K(3.5)}/>` },
 
-  /* ---------- unpacking spots ---------- */
-  bench: { vb: '0 0 200 170', area: [2, 36], draw: () => `
-    <rect x="18" y="72" width="164" height="94" fill="#f2e6cf" ${K()}/><path d="M100 74 V164" ${K(3.5)}/>
-    <circle cx="90" cy="112" r="4.5" fill="${INK}"/><circle cx="110" cy="112" r="4.5" fill="${INK}"/>
-    <path d="M168 60 V38 Q168 28 158 28 H148" fill="none" ${K(6)}/><rect x="6" y="58" width="188" height="16" rx="4" fill="#d9b07c" ${K()}/>` },
-  basket: { vb: '0 0 200 170', area: [4, 45], draw: () => `
-    <path d="M24 66 H176 L161 158 Q160 166 152 166 H48 Q40 166 39 158 Z" fill="#e8c992" ${K()}/>
-    <path d="M30 98 H170 M35 128 H165" ${K(3.5)}/><path d="M64 70 L68 162 M100 70 V164 M136 70 L132 162" stroke="#b98a5e" stroke-width="3.5" stroke-linecap="round"/>
-    <rect x="16" y="58" width="168" height="16" rx="6" fill="#d9b07c" ${K()}/>` },
-  shelf: { vb: '0 0 200 170', area: [14, 52], draw: () => `
-    <path d="M38 126 V156 L66 126" fill="#c49a6c" ${K(4)}/><path d="M162 126 V156 L134 126" fill="#c49a6c" ${K(4)}/>
-    <rect x="8" y="110" width="184" height="16" rx="4" fill="#d9b07c" ${K()}/>` },
-  hook: { vb: '0 0 200 170', area: [30, 60], draw: () => `
-    <rect x="16" y="20" width="168" height="22" rx="6" fill="#d9b07c" ${K()}/>
-    <circle cx="30" cy="31" r="3" fill="${INK}"/><circle cx="170" cy="31" r="3" fill="${INK}"/>
-    ${[60, 100, 140].map(x => `<path d="M${x} 42 V64 Q${x} 78 ${x + 12} 78 Q${x + 22} 78 ${x + 22} 66" fill="none" ${K(6)}/>`).join('')}` },
-  toybox: { vb: '0 0 200 170', area: [6, 46], draw: () => `
-    <path d="M28 82 L42 36 H164 L174 82 Z" fill="#6c9bd6" ${K()}/>
-    <rect x="22" y="80" width="156" height="84" rx="7" fill="#7aa9de" ${K()}/>
-    <path d="${starPath(100, 124, 22, 9)}" fill="#f4d36b" ${K(3.5)}/><path d="M22 96 H178" ${K(3.5)}/>` },
+  /* ---------- bag surprises ---------- */
+  kangaroo: { vb: '0 0 120 120', draw: () => { const B = '#c98a54'; return `
+    <path d="M82 96 Q104 100 118 116" fill="none" stroke="${INK}" stroke-width="14" stroke-linecap="round"/><path d="M82 96 Q104 100 118 116" fill="none" stroke="${B}" stroke-width="7" stroke-linecap="round"/>
+    <path d="M72 100 Q74 114 62 114 H24 Q16 114 20 107 Q30 103 52 99 Z" fill="${B}" ${K(4.5)}/>
+    <path d="M46 52 Q44 32 58 31 Q80 31 88 64 Q94 96 74 106 Q52 112 46 92 Q40 74 46 52 Z" fill="${B}" ${K()}/>
+    <path d="M52 78 Q50 98 64 100 Q76 98 74 80 Q62 85 52 78 Z" fill="#f1d3a8" ${K(3.5)}/>
+    <path d="M58 72 L56 63 L63 69" fill="${B}" ${K(2.5)}/><circle cx="63" cy="77" r="8" fill="${B}" ${K(3)}/><circle cx="60" cy="76" r="1.8" fill="${INK}"/>
+    <path d="M50 58 Q42 64 36 72" fill="none" stroke="${INK}" stroke-width="10" stroke-linecap="round"/><path d="M50 58 Q42 64 36 72" fill="none" stroke="${B}" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M36 28 L30 5 L44 24 Z" fill="${B}" ${K(3.5)}/><path d="M42 27 L44 3 L52 25 Z" fill="${B}" ${K(3.5)}/><path d="M45 20 L46 11" stroke="#f1b5a5" stroke-width="3" stroke-linecap="round"/>
+    <path d="M50 40 Q50 24 36 24 Q20 24 12 34 Q8 40 16 44 Q30 48 44 48 Q50 46 50 40 Z" fill="${B}" ${K()}/>
+    <circle cx="32" cy="34" r="3.4" fill="${INK}"/><circle cx="33" cy="33" r="1.1" fill="#fff"/><circle cx="12" cy="37" r="3.4" fill="${INK}"/>
+    <path d="M17 42 Q22 45 27 42" fill="none" ${K(2.5)}/><circle cx="27" cy="40" r="3" fill="#f4a3a3"/>`; } },
+  koala: { vb: '0 0 120 120', draw: () => { const G = '#b8b3ae'; return `
+    <ellipse cx="60" cy="92" rx="32" ry="24" fill="${G}" ${K()}/><ellipse cx="60" cy="98" rx="17" ry="14" fill="#ebe7e2"/>
+    <path d="M86 74 L106 50" ${K(3.5)}/><path d="M98 56 Q112 46 108 62 Q98 66 98 56 Z" fill="#8cc47e" ${K(3)}/><path d="M92 64 Q90 50 100 50 Q100 62 92 64 Z" fill="#8cc47e" ${K(3)}/>
+    <ellipse cx="40" cy="100" rx="9" ry="7" fill="${G}" ${K(3.5)}/><ellipse cx="84" cy="74" rx="8" ry="7" fill="${G}" ${K(3.5)}/>
+    <circle cx="28" cy="30" r="17" fill="${G}" ${K()}/><circle cx="28" cy="30" r="9" fill="#f7d6d6"/><circle cx="92" cy="30" r="17" fill="${G}" ${K()}/><circle cx="92" cy="30" r="9" fill="#f7d6d6"/>
+    <ellipse cx="60" cy="50" rx="32" ry="28" fill="#c4bfba" ${K()}/>
+    <ellipse cx="60" cy="57" rx="8.5" ry="12" fill="#4a423e" ${K(3)}/>
+    <path d="M40 46 Q45 51 50 46 M70 46 Q75 51 80 46" fill="none" ${K(3)}/>
+    <circle cx="40" cy="60" r="4.5" fill="#f4a3a3"/><circle cx="80" cy="60" r="4.5" fill="#f4a3a3"/>
+    <path d="M56 72 Q60 75 64 72" fill="none" ${K(2.5)}/>`; } },
+  balloon: { vb: '0 0 60 150', draw: () => `<path d="M30 58 Q24 90 34 110 Q40 128 32 150" fill="none" ${K(2.5)}/>
+    <ellipse cx="30" cy="30" rx="24" ry="28" fill="#e5675c" ${K()}/><path d="M26 58 L30 64 L34 58 Z" fill="#e5675c" ${K(3)}/>
+    <path d="M18 22 Q20 13 28 11" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/>` },
+  frog: { vb: '0 0 120 120', draw: o => { const G = '#86c27a'; return `
+    <path d="M22 102 Q12 86 28 80 Q40 96 34 106 Z" fill="#7cb86e" ${K(4)}/><path d="M98 102 Q108 86 92 80 Q80 96 86 106 Z" fill="#7cb86e" ${K(4)}/>
+    <circle cx="38" cy="44" r="15" fill="${G}" ${K()}/><circle cx="82" cy="44" r="15" fill="${G}" ${K()}/>
+    <ellipse cx="60" cy="80" rx="40" ry="28" fill="${G}" ${K()}/><ellipse cx="60" cy="90" rx="22" ry="14" fill="#cfe9b6"/>
+    <circle cx="38" cy="42" r="8" fill="#fff" ${K(3)}/><circle cx="40" cy="43" r="4" fill="${INK}"/><circle cx="82" cy="42" r="8" fill="#fff" ${K(3)}/><circle cx="80" cy="43" r="4" fill="${INK}"/>
+    ${o.tongue ? `<path d="M36 78 Q10 70 -36 46" fill="none" stroke="${INK}" stroke-width="11" stroke-linecap="round"/><path d="M36 78 Q10 70 -36 46" fill="none" stroke="#ef7a9a" stroke-width="6" stroke-linecap="round"/>
+      <path d="M36 74 Q60 100 84 76 Q60 86 36 74 Z" fill="#ef7a9a" ${K(4)}/>` : `<path d="M34 76 Q60 94 86 76" fill="none" ${K(4)}/>`}
+    <circle cx="30" cy="80" r="5" fill="#f4a3a3"/><circle cx="90" cy="80" r="5" fill="#f4a3a3"/>
+    <path d="M42 106 H30 M78 106 H90" ${K(6)}/>`; } },
+  frogTongue: { vb: '0 0 120 120', draw: () => ART.frog.draw({ tongue: true }) },
+  fly: { vb: '0 0 40 40', draw: () => `<ellipse cx="13" cy="11" rx="9" ry="6" fill="#dff0fb" ${K(2.5)}/><ellipse cx="27" cy="11" rx="9" ry="6" fill="#dff0fb" ${K(2.5)}/><ellipse cx="20" cy="23" rx="8" ry="10" fill="#3a3040"/>` },
+  chicken: { vb: '0 0 120 120', draw: () => `
+    <path d="M50 96 V114 M66 96 V114 M44 114 H56 M60 114 H72" fill="none" ${K(4.5)}/>
+    <path d="M86 66 Q96 34 112 40 Q104 56 110 64 Q100 62 96 74 Z" fill="#fff" ${K(4)}/>
+    <path d="M28 70 Q28 46 52 46 Q70 46 80 56 Q98 64 94 82 Q88 102 60 102 Q30 100 28 70 Z" fill="#fff" ${K()}/>
+    <g class="wing"><path d="M50 70 Q66 60 82 72 Q74 92 54 84 Z" fill="#f3efe6" ${K(3.5)}/></g>
+    <path d="M30 27 Q32 16 38 22 Q42 12 48 20 Q54 14 54 27 Z" fill="#e5675c" ${K(3.5)}/>
+    <circle cx="40" cy="38" r="15" fill="#fff" ${K()}/>
+    <path d="M26 36 L12 42 L26 46 Z" fill="#f4d36b" ${K(3.5)}/><path d="M26 46 Q22 57 31 54 Z" fill="#e5675c" ${K(3)}/>
+    <circle cx="36" cy="34" r="3" fill="${INK}"/><circle cx="44" cy="42" r="3.5" fill="#f4a3a3"/>` },
+  puppy: { vb: '0 0 120 120', draw: () => { const B = '#e3b27a', D = '#b57a48'; return `
+    <g class="tail"><path d="M100 72 Q116 58 110 40" fill="none" stroke="${INK}" stroke-width="12" stroke-linecap="round"/><path d="M100 72 Q116 58 110 40" fill="none" stroke="${B}" stroke-width="6" stroke-linecap="round"/></g>
+    <rect x="50" y="84" width="12" height="26" rx="5" fill="${B}" ${K(4)}/><rect x="66" y="86" width="12" height="24" rx="5" fill="${B}" ${K(4)}/>
+    <rect x="84" y="84" width="12" height="26" rx="5" fill="${B}" ${K(4)}/><rect x="96" y="82" width="11" height="26" rx="5" fill="${B}" ${K(4)}/>
+    <ellipse cx="76" cy="78" rx="32" ry="20" fill="${B}" ${K()}/><ellipse cx="86" cy="72" rx="10" ry="7" fill="${D}"/>
+    <circle cx="38" cy="50" r="24" fill="${B}" ${K()}/>
+    <ellipse cx="22" cy="60" rx="14" ry="10" fill="#f6dcb8" ${K(3.5)}/><ellipse cx="12" cy="56" rx="5" ry="4" fill="${INK}"/>
+    <path d="M20 68 Q20 82 27 79 Q31 75 28 68 Z" fill="#ef7a9a" ${K(3)}/>
+    <path d="M44 30 Q66 26 60 52 Q56 66 48 57 Q44 44 44 30 Z" fill="${D}" ${K(4)}/>
+    <circle cx="32" cy="45" r="3.6" fill="${INK}"/><circle cx="33" cy="44" r="1.2" fill="#fff"/>
+    <path d="M52 66 Q58 76 54 84" fill="none" stroke="#e5675c" stroke-width="6" stroke-linecap="round"/><circle cx="55" cy="86" r="4" fill="#f4d36b" ${K(2.5)}/>`; } },
+  penguin: { vb: '0 0 120 120', draw: () => { const D = '#3d3a40'; return `
+    <ellipse cx="48" cy="112" rx="12" ry="5" fill="#f0873a" ${K(3.5)}/><ellipse cx="72" cy="112" rx="12" ry="5" fill="#f0873a" ${K(3.5)}/>
+    <path d="M30 60 Q12 80 22 96 Q34 84 36 70 Z" fill="${D}" ${K(4)}/><path d="M90 60 Q108 80 98 96 Q86 84 84 70 Z" fill="${D}" ${K(4)}/>
+    <path d="M60 10 Q30 12 28 56 Q24 104 60 110 Q96 104 92 56 Q90 12 60 10 Z" fill="${D}" ${K()}/>
+    <path d="M60 34 Q40 40 40 70 Q42 100 60 102 Q78 100 80 70 Q80 40 60 34 Z" fill="#fff"/>
+    <ellipse cx="49" cy="36" rx="9" ry="10" fill="#fff"/><ellipse cx="71" cy="36" rx="9" ry="10" fill="#fff"/>
+    <circle cx="50" cy="37" r="3.6" fill="${INK}"/><circle cx="70" cy="37" r="3.6" fill="${INK}"/>
+    <path d="M53 46 L60 57 L67 46 Z" fill="#f0873a" ${K(3)}/><circle cx="44" cy="52" r="4" fill="#f4a3a3"/><circle cx="76" cy="52" r="4" fill="#f4a3a3"/>`; } },
+  butterfly: { vb: '0 0 60 60', draw: o => { const c = o.color || '#f29bb8', l = shade(c, .35); return `
+    <path d="M30 30 Q8 0 3 18 Q1 34 30 30 Z" fill="${c}" ${K(3)}/><path d="M30 30 Q52 0 57 18 Q59 34 30 30 Z" fill="${c}" ${K(3)}/>
+    <path d="M30 32 Q10 52 18 56 Q28 56 30 32 Z" fill="${l}" ${K(3)}/><path d="M30 32 Q50 52 42 56 Q32 56 30 32 Z" fill="${l}" ${K(3)}/>
+    <circle cx="16" cy="20" r="3" fill="#fff"/><circle cx="44" cy="20" r="3" fill="#fff"/>
+    <ellipse cx="30" cy="32" rx="3.5" ry="13" fill="#3a3040"/><path d="M29 20 Q24 10 20 8 M31 20 Q36 10 40 8" fill="none" ${K(2)}/>`; } },
+  elephant: { vb: '0 0 120 120', draw: () => { const G = '#b9c6d8', H = '#c3cfe0'; return `
+    <path d="M104 70 Q116 78 110 92" fill="none" ${K(4)}/>
+    <rect x="52" y="84" width="16" height="26" rx="5" fill="${G}" ${K(4)}/><rect x="74" y="86" width="16" height="24" rx="5" fill="${G}" ${K(4)}/><rect x="92" y="84" width="15" height="26" rx="5" fill="${G}" ${K(4)}/>
+    <ellipse cx="76" cy="72" rx="34" ry="25" fill="${G}" ${K()}/>
+    <path d="M26 58 Q8 54 8 38 Q8 26 0 22" fill="none" stroke="${INK}" stroke-width="15" stroke-linecap="round"/><path d="M26 58 Q8 54 8 38 Q8 26 0 22" fill="none" stroke="${H}" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="40" cy="52" r="24" fill="${H}" ${K()}/>
+    <path d="M28 66 Q22 72 15 70" fill="none" stroke="${INK}" stroke-width="7" stroke-linecap="round"/><path d="M28 66 Q22 72 16 70" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <g class="ear"><path d="M48 30 Q78 22 76 56 Q74 80 52 72 Q46 54 48 30 Z" fill="${H}" ${K()}/><path d="M53 37 Q69 33 69 54 Q67 68 55 64 Z" fill="#f7c9d6"/></g>
+    <circle cx="32" cy="46" r="3.6" fill="${INK}"/><circle cx="33" cy="45" r="1.2" fill="#fff"/><circle cx="28" cy="56" r="4" fill="#f4a3a3"/>`; } },
+  feather: { vb: '0 0 30 40', draw: () => `<path d="M15 2 Q28 14 22 30 Q18 38 12 38 Q4 26 8 12 Q10 6 15 2 Z" fill="#fff" ${K(2.5)}/><path d="M14 8 Q14 24 12 38" fill="none" ${K(2)}/>` },
 
   /* ---------- icons ---------- */
   houseIcon: { vb: '0 0 120 120', draw: () => `<path d="M10 58 L60 16 L110 58 Z" fill="#e5675c" ${K()}/><rect x="22" y="54" width="76" height="56" fill="#f7e2b5" ${K()}/><path d="M50 110 V84 Q50 72 60 72 Q70 72 70 84 V110 Z" fill="#6fc2b8" ${K(4)}/>` },
@@ -947,22 +1030,32 @@ const ART = {
   replay: { vb: '0 0 100 100', draw: () => `<path d="M78 56 A28 28 0 1 1 70 30" fill="none" ${K(9)}/><path d="M54 26 L72 28 L70 10" fill="none" ${K(9)}/>` },
   tick: { vb: '0 0 100 100', draw: () => `<path d="M18 54 L40 76 L84 26" fill="none" stroke="#4f9a55" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>` },
   note: { vb: '0 0 40 50', draw: () => `<path d="M12 40 V8 L34 3 V34" fill="none" ${K(4)}/><ellipse cx="8" cy="40" rx="8" ry="6" fill="${INK}"/><ellipse cx="30" cy="34" rx="8" ry="6" fill="${INK}"/>` },
-  groundLine: { vb: '0 0 800 16', draw: () => `<path d="M0 8 Q100 2 200 9 T400 8 T600 7 T800 9" fill="none" ${K(5)}/>` }
 };
 
 /* where things can hide in the house (x = centre, y = where it stands, in 1000 x 600 units) */
 const HOUSE = {
   labels: { bedroom: [72, 84], bathroom: [348, 84], play: [684, 84], kitchen: [30, 356], table: [348, 354], books: [684, 354] },
   slots: {
-    bedroom:  [[134, 250], [212, 250], [284, 322]],
+    bedroom:  [[134, 250], [212, 250], [287, 304]],
     bathroom: [[400, 254], [488, 254], [598, 230]],
     play:     [[740, 262], [818, 322], [934, 322]],
     kitchen:  [[72, 482], [168, 482], [288, 442]],
     table:    [[428, 470], [572, 470], [500, 594]],
     books:    [[755, 440], [882, 532], [938, 594]]
   },
-  size: 90
+  size: 90,
+  // where things live when unpacking: drop area [x, y, w, h] and the line they stand on (sy)
+  spots: {
+    bench:     { rect: [16, 392, 236, 104], sy: 482 },
+    sink:      { rect: [546, 104, 108, 152], sy: 230 },
+    basket:    { rect: [238, 226, 94, 96], sy: 292 },
+    hook:      { rect: [70, 104, 144, 100], sy: 200 },
+    toybox:    { rect: [678, 220, 124, 102], sy: 268 },
+    bookshelf: { rect: [682, 370, 146, 222], sy: 440 }
+  }
 };
+const spotOf = s => HOUSE.spots[s] ? s : 'bench';
+const roomLabels = () => Object.entries(HOUSE.labels).map(([r, [x, y]]) => `<span class="room-label" style="left:${x / 10}%;top:${y / 6}%">${CONFIG.rooms[r] || r}</span>`).join('');
 
 function art(name, opts = {}, cls = '') {
   const a = ART[name];
@@ -1048,6 +1141,13 @@ const Sfx = {
     clang(d)  { [523, 1367, 2213, 3150].forEach(f => this.tone(f, d, .9, { vol: .045, attack: .003 })); },
     boing(d)  { const o = this.tone(160, d, .55, { to: 420, vol: .16 }); this.lfo(o, this.ctx.currentTime + d, .55, 14, 40); },
     blub(d)   { [[260, 700], [320, 900], [240, 640]].forEach(([a, b], i) => this.tone(a, d + i * .15, .12, { to: b, vol: .1 })); },
+    ribbit(d)  { [0, .2].forEach(o => { this.tone(210, d + o, .11, { to: 150, type: 'square', vol: .045 }); this.noise(d + o, .08, { f: 500, q: 3, vol: .04 }); }); },
+    bawk(d)    { [0, .12, .24].forEach((o, i) => this.tone(i === 2 ? 900 : 700, d + o, i === 2 ? .22 : .09, { to: i === 2 ? 1300 : 820, type: 'square', vol: .028 })); },
+    woof(d)    { [0, .28].forEach(o => { this.tone(330, d + o, .14, { to: 170, type: 'sawtooth', vol: .07 }); this.noise(d + o, .1, { f: 700, vol: .05 }); }); },
+    trumpet(d) { const o = this.tone(300, d, 1.0, { to: 560, type: 'sawtooth', vol: .06, attack: .06 }); this.lfo(o, this.ctx.currentTime + d, 1, 7, 14); },
+    wheee(d)   { this.tone(500, d, 1.1, { to: 1200, vol: .07, attack: .05 }); },
+    snore(d)   { [0, 1].forEach(o => this.noise(d + o, .8, { type: 'lowpass', f: 260, vol: .1, attack: .35 })); },
+    flutter(d) { for (let i = 0; i < 18; i++) this.noise(d + i * .06, .02, { f: 3200, q: 2, vol: .03 }); },
     bubblePop(d) { this.tone(rand(900, 1500), d, .06, { to: 2000, vol: .05 }); },
     cheer(d) {
       [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, d + i * .12, .55, { type: 'triangle', vol: .13 }));
@@ -1235,6 +1335,152 @@ function funReact(el, kind) {
 }
 
 /* =====================================================================
+   BAG SURPRISES — something silly pops out when the bag is opened.
+   Each one: pops out of the bag, does its thing, then leaves.
+   To add one: draw it in ART, add a function here, and list it in CONFIG.surprises.
+   ===================================================================== */
+function critter(name, size, opts = {}) {
+  const d = document.createElement('div');
+  d.className = 'fx critter';
+  Object.assign(d.style, { width: size + 'px', height: size + 'px', transformOrigin: '50% 100%', opacity: 0 });
+  d.innerHTML = art(name, opts);
+  $('#fx-layer').appendChild(d);
+  return d;
+}
+/* move a critter through points {t ms, x, y (bottom-centre), s|sx|sy scale, r rotate, o opacity, f facing 1=left -1=right} */
+function path(el, size, pts) {
+  const total = pts[pts.length - 1].t || 1;
+  const kf = pts.map(p => ({
+    offset: Math.min(1, p.t / total), opacity: p.o ?? 1,
+    transform: `translate(${p.x - size / 2}px, ${p.y - size}px) rotate(${p.r || 0}deg) scale(${(p.sx ?? p.s ?? 1) * (p.f ?? 1)}, ${p.sy ?? p.s ?? 1})`
+  }));
+  for (let i = 1; i < kf.length; i++) if (kf[i].offset < kf[i - 1].offset) kf[i].offset = kf[i - 1].offset;
+  return finished(el.animate(kf, { duration: total, fill: 'forwards' }));
+}
+const popPts = (c, f = 1) => [{ t: 0, x: c.bx, y: c.by + 40, s: .25, o: 0, f }, { t: 260, x: c.bx, y: c.by - 50, s: 1.08, f }, { t: 460, x: c.bx, y: c.by, s: 1, f }];
+const hold = (t, p, f = 1, extra = {}) => ({ t, x: p.x, y: p.y, f, ...extra });
+function hopPts(t0, a, b, H, dur, f = 1, n = 9) {
+  const pts = [];
+  for (let k = 1; k <= n; k++) {
+    const u = k / n;
+    pts.push({ t: t0 + dur * u, x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u - 4 * H * u * (1 - u), f, r: k < n ? -6 : 0, sx: k === n ? 1.15 : 1, sy: k === n ? .82 : 1 });
+  }
+  pts.push({ t: t0 + dur + 90, x: b.x, y: b.y, f });
+  return pts;
+}
+function runPts(t0, a, b, dur, f = 1, bob = 10) {
+  const pts = [], n = Math.max(4, Math.round(dur / 110));
+  for (let k = 1; k <= n; k++) pts.push({ t: t0 + dur * k / n, x: a.x + (b.x - a.x) * k / n, y: b.y - (k % 2 ? bob : 0), f, r: k % 2 ? -5 : 4 });
+  return pts;
+}
+function zzz(el, i) {
+  const [x, , r] = rectC(el);
+  fxSpawn(`<span class="zz">Z</span>`, '', x + r.width * .3, r.top + 10, 34, 40,
+    [{ opacity: 0, t: 'scale(.5)' }, { opacity: 1, dx: 14 + i * 6, dy: -40 }, { opacity: 0, dx: 30 + i * 10, dy: -110, t: 'scale(1.4) rotate(12deg)' }], 1300);
+}
+function feather(x, y) {
+  fxSpawn(art('feather'), '', x, y, 26, 34,
+    [{ opacity: 0 }, { opacity: 1, dx: rand(-20, 20), dy: 40, t: 'rotate(30deg)' }, { opacity: 1, dx: rand(-50, 50), dy: 110, t: 'rotate(-30deg)' }, { opacity: 0, dx: rand(-60, 60), dy: 170, t: 'rotate(20deg)' }], 1600);
+}
+const named = (el, word) => setTimeout(() => el.isConnected && bubble(el, word), 520);
+const offLeft = (c, s) => c.hr.left - s * 1.4;
+
+const SURPRISE = {
+  /* hops right across the house and out */
+  async kangaroo(c) {
+    const s = c.size, el = critter('kangaroo', s); named(el, c.word); Sfx.play('pop');
+    const pts = [...popPts(c), hold(900, { x: c.bx, y: c.by })];
+    let t = 900, p = { x: c.bx, y: c.by };
+    [.84, .6, .36, .12].map(fx => ({ x: c.hr.left + c.hr.width * fx, y: c.floorDown })).concat([{ x: offLeft(c, s), y: c.floorDown }]).forEach(q => {
+      Sfx.play('boing', t / 1000); pts.push(...hopPts(t, p, q, 170, 560)); t += 650; p = q;
+    });
+    await path(el, s, pts); el.remove();
+  },
+  /* has a little sleep, then floats away on a balloon */
+  async koala(c) {
+    const s = c.size * .85, el = critter('koala', s); named(el, c.word); Sfx.play('pop');
+    Sfx.play('snore', .6);
+    [700, 1100, 1500].forEach((d, i) => setTimeout(() => el.isConnected && zzz(el, i), d));
+    setTimeout(() => { if (!el.isConnected) return; const b = document.createElement('div'); b.className = 'balloon'; b.innerHTML = art('balloon'); el.appendChild(b); Sfx.play('pop'); }, 2000);
+    const pts = [...popPts(c), hold(2200, { x: c.bx, y: c.by }), { t: 2800, x: c.bx - 40, y: c.by - 130, r: -6 }, { t: 3400, x: c.bx + 20, y: c.by - 280, r: 6 }, { t: 4300, x: c.bx - 30, y: -s * .6, r: -4 }];
+    await path(el, s, pts); el.remove();
+  },
+  /* catches a fly with its tongue, then jumps upstairs and away */
+  async frog(c) {
+    const s = c.size * .8, el = critter('frog', s); named(el, c.word); Sfx.play('pop');
+    const fx = c.bx - s * .83, fy = c.by - s * .67;
+    const fly = critter('fly', 34), fp = [];
+    for (let i = 0; i <= 10; i++) fp.push({ t: 200 + i * 110, x: fx + Math.cos(i * 1.7) * 50 * (1 - i / 12), y: fy + 17 + Math.sin(i * 2.3) * 40 * (1 - i / 12), o: i ? 1 : 0 });
+    path(fly, 34, fp);
+    Sfx.play('flutter', .2);
+    setTimeout(() => { if (!el.isConnected) return; el.innerHTML = art('frogTongue'); fly.remove(); Sfx.play('pop'); }, 1400);
+    setTimeout(() => { if (el.isConnected) { el.innerHTML = art('frog'); Sfx.play('ribbit'); } }, 1750);
+    const up = { x: c.hr.left + c.hr.width * .5, y: c.floorUp };
+    const pts = [...popPts(c), hold(2100, { x: c.bx, y: c.by })];
+    Sfx.play('boing', 2.1); pts.push(...hopPts(2100, { x: c.bx, y: c.by }, up, 230, 750));
+    Sfx.play('boing', 3.0); pts.push(...hopPts(2950, up, { x: offLeft(c, s), y: c.floorUp }, 180, 700));
+    await path(el, s, pts); el.remove(); fly.remove();
+  },
+  /* flaps about, feathers everywhere, runs off */
+  async chicken(c) {
+    const s = c.size * .8, el = critter('chicken', s); el.classList.add('flap'); named(el, c.word); Sfx.play('pop');
+    Sfx.play('bawk', .35); Sfx.play('bawk', 1.0);
+    [400, 600, 800, 1000, 1200, 1400].forEach(d => setTimeout(() => el.isConnected && feather(c.bx + rand(-50, 50), c.by - s * .7), d));
+    const f0 = { x: c.bx - s * .6, y: c.floorDown };
+    const pts = [...popPts(c), hold(1600, { x: c.bx, y: c.by }), ...hopPts(1600, { x: c.bx, y: c.by }, f0, 60, 420), ...runPts(2150, f0, { x: offLeft(c, s), y: c.floorDown }, 1700, 1, 12)];
+    Sfx.play('bawk', 2.4);
+    await path(el, s, pts); el.remove();
+  },
+  /* turns round and round, woofs, runs off */
+  async puppy(c) {
+    const s = c.size * .85, el = critter('puppy', s); el.classList.add('wag'); named(el, c.word); Sfx.play('pop');
+    Sfx.play('woof', .5); Sfx.play('woof', 1.4);
+    const P = { x: c.bx, y: c.by };
+    const f0 = { x: c.bx - s * .5, y: c.floorDown };
+    const pts = [...popPts(c), hold(650, P, 1), hold(800, P, -1), hold(950, P, 1), hold(1100, P, -1), hold(1250, P, 1), hold(1400, P, -1), hold(1650, P, 1),
+      ...hopPts(1650, P, f0, 70, 420), ...runPts(2200, f0, { x: offLeft(c, s), y: c.floorDown }, 1500, 1, 8)];
+    await path(el, s, pts); el.remove();
+  },
+  /* waddles, then belly-slides across the floor */
+  async penguin(c) {
+    const s = c.size * .8, el = critter('penguin', s); named(el, c.word); Sfx.play('pop');
+    const P = { x: c.bx, y: c.by }, f0 = { x: c.bx - s * .4, y: c.floorDown };
+    const pts = [...popPts(c), hold(700, P, 1, { r: -10 }), hold(900, P, 1, { r: 10 }), hold(1100, P, 1, { r: -10 }), hold(1300, P, 1, { r: 8 }), hold(1450, P),
+      ...hopPts(1450, P, f0, 50, 400), { t: 2150, x: f0.x - 30, y: c.floorDown - s * .3, r: -80 }, { t: 3500, x: offLeft(c, s), y: c.floorDown - s * .3, r: -80 }];
+    Sfx.play('wheee', 2.0);
+    await path(el, s, pts); el.remove();
+  },
+  /* a cloud of butterflies flutters out */
+  async butterflies(c) {
+    const cols = ['#f29bb8', '#7aa9de', '#f4d36b', '#a98bd8', '#8cc47e', '#f0a65a', '#e5675c'];
+    Sfx.play('flutter'); Sfx.play('sparkle', .3); Sfx.play('flutter', 1.2);
+    let first = true;
+    await Promise.all(cols.map((col, i) => {
+      const sz = rand(46, 70), el = critter('butterfly', sz, { color: col }); el.classList.add('flutter');
+      if (first) { named(el, c.word); first = false; }
+      const dur = 2600 + i * 150, sx = c.bx + rand(-20, 20), sy = c.by + 10;
+      const pts = [{ t: 0, x: sx, y: sy, s: .2, o: 0 }];
+      for (let k = 1; k <= 6; k++) pts.push({ t: dur * k / 7, x: sx + (c.hr.left - 120 - sx) * (k / 6) * rand(.3, 1) + rand(-60, 60), y: sy - (sy + 80) * (k / 6) * rand(.5, 1) + rand(-40, 40), s: 1, r: rand(-20, 20) });
+      pts.push({ t: dur, x: rand(c.hr.left, c.hr.right), y: -90, s: 1, o: 0 });
+      return path(el, sz, pts).then(() => el.remove());
+    }));
+  },
+  /* the bag swells up... and an elephant squeezes out! */
+  async elephant(c) {
+    const s = c.size * 1.15;
+    c.bag.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.2, 1.1)' }, { transform: 'scale(.94, 1.04)' }, { transform: 'scale(1.28, 1.15)' }, { transform: 'scale(1)' }], { duration: 900, easing: 'ease-in-out' });
+    Sfx.play('boing'); Sfx.play('boing', .45);
+    await wait(850);
+    const el = critter('elephant', s); named(el, c.word); Sfx.play('pop'); Sfx.play('trumpet', .3);
+    setTimeout(() => el.classList.add('ears'), 400); setTimeout(() => el.classList.remove('ears'), 1500);
+    const P = { x: c.bx, y: c.by }, f0 = { x: c.bx - s * .5, y: c.floorDown };
+    const pts = [{ t: 0, x: c.bx, y: c.by + 30, s: .1, o: 0 }, { t: 300, x: c.bx, y: c.by - 70, s: 1.2 }, { t: 500, x: c.bx, y: c.by, s: 1 }, hold(1600, P),
+      ...hopPts(1600, P, f0, 40, 450), ...runPts(2150, f0, { x: offLeft(c, s), y: c.floorDown }, 2000, 1, 6)];
+    await path(el, s, pts); el.remove();
+  }
+};
+
+/* =====================================================================
    APP + SCREENS
    ===================================================================== */
 const S = { screen: null, child: null, ctx: { day: 0 }, help: () => {}, timers: [], token: 0 };
@@ -1256,6 +1502,7 @@ function go(name, params = {}) {
   S.timers.forEach(clearTimeout); S.timers = [];
   S.token++;
   Hint.stop();
+  $$('#fx-layer .fx, #fx-layer .bubble').forEach(e => e.remove());
   Object.assign(S, params);
   S.screen = name; S.help = () => {};
   S.ctx = { day: currentDay() };
@@ -1380,7 +1627,7 @@ const SCREENS = {
       ${stripHTML(c, items.map(i => ({ id: i.id, icon: itemArt(i), word: i.word, done: isDone(i.id), day: i.days ? DAY_SHORT[ctx.day] : '' })))}
       <div class="pack-main">
         <div class="house-wrap"><div class="house">${art('house')}
-          ${Object.entries(HOUSE.labels).map(([r, [x, y]]) => `<span class="room-label" style="left:${x / 10}%;top:${y / 6}%">${CONFIG.rooms[r] || r}</span>`).join('')}
+          ${roomLabels()}
           ${objs.map(o => `<div class="obj" data-id="${o.id}" data-kind="${o.kind}" style="${slotStyle(prog.layout[o.id])}">${o.kind === 'item' ? itemArt(o) : art(o.art, o)}</div>`).join('')}
         </div></div>
         <div class="bag-zone"><div class="door">${art('door')}</div><div class="girl" style="--gh:${c.look.height}">${figure(c)}</div>${backpackHTML(c.backpack, 'open')}</div>
@@ -1568,22 +1815,26 @@ const SCREENS = {
       }
     }
 
-    /* 4b. inside: open the bag, then put each thing in its spot */
+    /* 4b. inside the house: open the bag (surprise!), then put each thing where it lives */
     function inside() {
-      const spotIds = [...new Set(items.map(i => CONFIG.spots[i.spot] ? i.spot : Object.keys(CONFIG.spots)[0]))];
       const open = prog.step !== 'openBag';
-      play.innerHTML = `<div class="room enter">
-        <div class="floor-line">${art('groundLine')}</div>
-        <div class="spots">${spotIds.map(id => { const sp = CONFIG.spots[id], a = ART[sp.art] || ART.shelf; return `
-          <button class="spot" data-spot="${id}"><span class="spot-art">${art(sp.art)}<span class="spot-items" style="top:${a.area[0]}%;height:${a.area[1] - a.area[0]}%"></span></span><span class="spot-word">${sp.word}</span></button>`; }).join('')}</div>
-        <div class="floor-row">${backpackHTML(c.backpack, open ? 'open' : 'closed pulse')}<div class="floor-items">${items.map(i => itemTile(i, isDone(i.id) ? 'gone' : (open ? '' : 'in-bag'))).join('')}</div></div>
-      </div>`;
-      $('.floor-line svg', play).setAttribute('preserveAspectRatio', 'none');
-      const bag = $('.floor-row .backpack', play);
-      const spotEl = id => $(`.spot[data-spot="${id}"]`, play) || $('.spot', play);
-      const placeIn = item => { const d = document.createElement('div'); d.className = 'placed'; d.innerHTML = itemArt(item); $('.spot-items', spotEl(item.spot)).appendChild(d); };
+      const spotIds = Object.keys(HOUSE.spots);
+      $('.game', screen).classList.add('indoors');
+      play.innerHTML = `<div class="pack-main enter">
+        <div class="house-wrap"><div class="house">${art('house')}${roomLabels()}
+          ${spotIds.map(id => { const g = HOUSE.spots[id], [x, y, w, hh] = g.rect; return `
+            <div class="zone" data-spot="${id}" style="left:${x / 10}%;top:${y / 6}%;width:${w / 10}%;height:${hh / 6}%"><span class="zone-label">${CONFIG.spots[id]?.word || id}</span></div>
+            <div class="zone-items" data-spot="${id}" style="left:${x / 10}%;width:${w / 10}%;top:${(g.sy - 64) / 6}%;height:${64 / 6}%"></div>`; }).join('')}
+        </div></div>
+        <div class="bag-zone unpack-zone">
+          <div class="pile">${items.map(i => `<div class="pile-item ${isDone(i.id) ? 'gone' : (open ? '' : 'in-bag')}" data-id="${i.id}">${itemArt(i)}</div>`).join('')}</div>
+          <div class="mat"></div>${backpackHTML(c.backpack, open ? 'open' : 'closed pulse')}
+        </div></div>`;
+      const bag = $('.unpack-zone .backpack', play);
+      const zone = id => $(`.zone[data-spot="${spotOf(id)}"]`, play);
+      const placeIn = item => { const d = document.createElement('div'); d.className = 'placed'; d.innerHTML = itemArt(item); $(`.zone-items[data-spot="${spotOf(item.spot)}"]`, play).appendChild(d); };
       items.filter(i => isDone(i.id)).forEach(placeIn);
-      $$('.spot', play).forEach(s => s.addEventListener('click', () => { wiggle(s); Sfx.play('pop'); bubble(s, CONFIG.spots[s.dataset.spot].word); }));
+      $$('.zone', play).forEach(z => z.addEventListener('click', () => { flash(z, 'glow-once'); Sfx.play('pop'); bubble(z, CONFIG.spots[z.dataset.spot]?.word || ''); }));
 
       if (!open) {
         setBanner([art('tapHand'), art('backpackClosed', c.backpack)], L.openBag);
@@ -1597,50 +1848,53 @@ const SCREENS = {
           bag.classList.replace('closed', 'open');
           $('.bp-back', bag).animate([{ transform: 'scaleY(.2)' }, { transform: 'scaleY(1.1)' }, { transform: 'scaleY(1)' }], { duration: 450, easing: 'ease-out' });
           flash(bag, 'bump'); tickCell('_open'); nextStep();
-          // things fly out of the bag
+          await surprise(bag); if (!alive()) return;
+          // then her things fly out of the bag
           const [ox, , br] = rectC(bag), oy = br.top + br.height * .3;
-          $$('.floor-items .item.in-bag', play).forEach((el, n) => {
+          const pile = $$('.pile-item.in-bag', play);
+          pile.forEach((el, n) => {
             const [ix, iy] = rectC(el), dx = ox - ix, dy = oy - iy;
             el.classList.remove('in-bag');
             el.animate([
               { transform: `translate(${dx}px, ${dy}px) scale(.25) rotate(-140deg)`, opacity: 0 },
               { offset: .15, opacity: 1 },
-              { offset: .55, transform: `translate(${dx * .45}px, ${dy * .45 - 150}px) scale(.9) rotate(-30deg)`, opacity: 1 },
-              { transform: 'none', opacity: 1 }], { duration: 700, delay: 250 + n * 170, easing: 'ease-out', fill: 'backwards' });
-            later(() => Sfx.play('pop'), 300 + n * 170);
+              { offset: .55, transform: `translate(${dx * .45}px, ${dy * .45 - 120}px) scale(.9) rotate(-30deg)`, opacity: 1 },
+              { transform: 'none', opacity: 1 }], { duration: 650, delay: 100 + n * 160, easing: 'ease-out', fill: 'backwards' });
+            later(() => Sfx.play('pop'), 150 + n * 160);
           });
-          later(startPutAway, 700 + items.length * 170);
+          later(startPutAway, 600 + pile.length * 160);
         });
       } else startPutAway();
 
       function startPutAway() {
         if (!alive()) return;
-        setBanner([art('houseIcon')], L.putAway);
+        setBanner([art('backpackClosed', c.backpack), 'ARROW', art('houseIcon')], L.putAway);
         S.help = () => {
           const n = remaining()[0]; if (!n) return;
-          const el = $(`.floor-items .item[data-id="${n.id}"]`, play), sp = spotEl(n.spot);
-          sp.classList.add('glow'); later(() => sp.classList.remove('glow'), 4200);
-          Hint.drag(el, sp);
+          const el = $(`.pile-item[data-id="${n.id}"]`, play), z = zone(n.spot);
+          z.classList.add('glow'); later(() => z.classList.remove('glow'), 4200);
+          Hint.drag(el, z);
         };
         later(() => S.help(), 600);
         bag.addEventListener('click', () => { wiggle(bag); S.help(); });
       }
 
-      $$('.floor-items .item', play).forEach(el => {
+      $$('.pile-item', play).forEach(el => {
         const item = items.find(i => i.id === el.dataset.id);
         Drag.attach(el, {
-          targets: () => $$('.spot', play).map(s => ({ el: s, accept: s.dataset.spot === item.spot, margin: 70, shrink: .45, flyTo: () => $('.spot-items', s), onDrop: () => placed(item, el) })),
-          onStart: () => spotEl(item.spot).classList.add('glow'),
-          onEnd: () => spotEl(item.spot).classList.remove('glow'),
-          onTap: () => { Sfx.play('pop'); wiggle(el); flash(spotEl(item.spot), 'wiggle'); bubble(el, item.word); },
-          onMiss: () => { Sfx.play('nudge'); const r = spotEl(item.spot); r.classList.add('glow'); later(() => r.classList.remove('glow'), 1800); }
+          targets: () => $$('.zone', play).map(z => ({ el: z, accept: z.dataset.spot === spotOf(item.spot), margin: 50, shrink: .6,
+            flyTo: () => $(`.zone-items[data-spot="${z.dataset.spot}"]`, play), onDrop: () => placed(item, el) })),
+          onStart: () => zone(item.spot).classList.add('glow'),
+          onEnd: () => zone(item.spot).classList.remove('glow'),
+          onTap: () => { Sfx.play('pop'); wiggle(el); bubble(el, item.word); },
+          onMiss: () => { Sfx.play('nudge'); const z = zone(item.spot); z.classList.add('glow'); later(() => z.classList.remove('glow'), 1800); }
         });
       });
 
       async function placed(item, el) {
         el.classList.add('gone'); el.classList.remove('lifted');
         prog.done.push(item.id); Store.save();
-        placeIn(item); tickCell(item.id);
+        placeIn(item); tickCell(item.id); flash(zone(item.spot), 'glow-once');
         Sfx.play('drop'); Sfx.play('tick', .12);
         if (remaining().length) return;
         nextStep();
@@ -1650,6 +1904,20 @@ const SCREENS = {
         await zipAnim(bag, false, 700); if (!alive()) return;
         await wait(500); if (!alive()) return;
         celebrate('unpack');
+      }
+
+      /* something silly pops out of the bag */
+      async function surprise(bag) {
+        const list = Object.keys(CONFIG.surprises || {}).filter(k => SURPRISE[k]);
+        if (!list.length) return;
+        let pickName = list[Math.floor(Math.random() * list.length)];
+        for (let i = 0; i < 10 && list.length > 1 && pickName === Store.settings.lastSurprise; i++) pickName = list[Math.floor(Math.random() * list.length)];
+        Store.settings.lastSurprise = pickName; Store.save();
+        setBanner([art('laugh')], L.surprise, 'silly');
+        const hr = $('.house', play).getBoundingClientRect(), br = bag.getBoundingClientRect();
+        const ctx = { bag, bx: br.left + br.width / 2, by: br.top + br.height * .3, hr, size: Math.max(120, Math.min(240, hr.height * .36)),
+          floorDown: hr.top + hr.height * 592 / 600, floorUp: hr.top + hr.height * 320 / 600, word: CONFIG.surprises[pickName] };
+        await SURPRISE[pickName](ctx);
       }
     }
 
