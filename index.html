@@ -28,6 +28,11 @@
    sillyCount : how many silly things hide each game (grown-up menu can change it)
    spots    : where things live in the house when unpacking
    surprises: silly things that pop out of the bag when it is opened
+   routines : Morning and Night — the steps in order (reorder or delete freely)
+   steps    : each step's word and which mini-game it uses (kind)
+   outfits / pyjamas : clothes to pick from (type + colours + pattern)
+   children.hairStyles : the 3 hair styles each girl can choose
+   foods / shows / books : what's on the menu, on TV and on the book shelf
    After editing, bump CACHE in sw.js so the installed app picks up the change.
    ===================================================================== */
 const CONFIG = {
@@ -40,7 +45,9 @@ const CONFIG = {
       name: "Luna",
       badge: "moon",
       accent: "#f29bb8",
-      look: { hair: "#9e6b3d", hairDark: "#83593a", style: "pigtails", dress: "#f29bb8", freckles: true, height: 1 },
+      look: { hair: "#9e6b3d", hairDark: "#83593a", style: "pigtails", bobble: "#f29bb8", freckles: true, height: 1 },
+      outfit: "pinkDress", pyjamas: "starPjs",
+      hairStyles: ["pigtails", "ponytail", "plaits"],
       afterWord: "After school",
       fromWord: "school",
       backpack: { color: "#7cc47e", pocket: "#d8f0cd", deco: "rainbow" },
@@ -59,7 +66,9 @@ const CONFIG = {
       name: "Stella",
       badge: "star",
       accent: "#7aa9de",
-      look: { hair: "#dcb679", hairDark: "#a98049", style: "long", dress: "#7aa9de", freckles: false, height: 0.82 },
+      look: { hair: "#dcb679", hairDark: "#a98049", style: "long", bobble: "#7aa9de", clip: "star", freckles: false, height: 0.82 },
+      outfit: "blueDress", pyjamas: "unicornNightie",
+      hairStyles: ["long", "bun", "pigtails"],
       afterWord: "After childcare",
       fromWord: "childcare",
       backpack: { color: "#e5675c", pocket: "#fcd6ce", deco: "unicorn" },
@@ -113,14 +122,102 @@ const CONFIG = {
     puppy: "puppy!", penguin: "penguin!", butterflies: "butterflies!", elephant: "elephant!"
   },
 
-  modes: {
-    pack:   { word: "Pack",   time: "Morning" },
-    unpack: { word: "Unpack", steps: ["driveHome", "bringIn", "openBag", "putAway"] }
+  // the two daily routines, step by step (ids from `steps` below)
+  routines: {
+    morning: { word: "Morning", icon: "sun",  steps: ["wakeUp", "getDressed", "play", "game", "breakfast", "teeth", "hair", "pack", "goOut"] },
+    night:   { word: "Night",   icon: "moon", steps: ["comeHome", "play", "dinner", "bath", "pyjamas", "shows", "books", "teeth", "bed"] }
+  },
+
+  // every step: word is shown on screen ({place} = school or childcare), kind = which mini-game runs
+  steps: {
+    wakeUp:     { word: "wake up",       kind: "wakeUp" },
+    getDressed: { word: "get dressed",   kind: "dress", set: "outfits" },
+    play:       { word: "play",          kind: "play", choices: ["couch", "bar", "dance"] },
+    game:       { word: "play a game",   kind: "bubbles", count: 10 },
+    breakfast:  { word: "breakfast",     kind: "eat", menu: ["cereal", "toast", "pancakes", "fruit"] },
+    teeth:      { word: "brush teeth",   kind: "teeth" },
+    hair:       { word: "do hair",       kind: "hair" },
+    pack:       { word: "pack bag",      kind: "pack" },
+    goOut:      { word: "go to {place}", kind: "goOut" },
+    comeHome:   { word: "come home",     kind: "unpack" },
+    dinner:     { word: "dinner",        kind: "eat", menu: ["spaghetti", "fishVeg", "sausages", "soup"] },
+    bath:       { word: "bath",          kind: "bath" },
+    pyjamas:    { word: "pyjamas",       kind: "dress", set: "pyjamas" },
+    shows:      { word: "watch a show",  kind: "shows" },
+    books:      { word: "read a book",   kind: "books" },
+    bed:        { word: "go to bed",     kind: "bed" }
+  },
+
+  // clothes to choose from. type: dress | tee | overalls | tutu | pjs | nightie
+  // pattern: dots | stars | hearts | check | stripes | rainbow
+  outfits: {
+    pinkDress:   { word: "pink dress",    type: "dress",    color: "#f29bb8", pattern: "dots" },
+    blueDress:   { word: "blue dress",    type: "dress",    color: "#7aa9de", pattern: "dots" },
+    schoolDress: { word: "school dress",  type: "dress",    color: "#a9c7ea", pattern: "check" },
+    rainbow:     { word: "rainbow dress", type: "dress",    color: "#fff",    pattern: "rainbow" },
+    tee:         { word: "shirt and shorts", type: "tee",   top: "#f4d36b", bottom: "#8cc47e", pattern: "hearts", patColor: "#e5675c" },
+    overalls:    { word: "overalls",      type: "overalls", top: "#e5675c", bottom: "#6c8fc2" },
+    tutu:        { word: "tutu",          type: "tutu",     top: "#a98bd8", bottom: "#f7b6c9", pattern: "stars" }
+  },
+  pyjamas: {
+    starPjs:        { word: "star pyjamas",    type: "pjs",     top: "#4d6a9c", bottom: "#4d6a9c", pattern: "stars", patColor: "#f4d36b" },
+    spottyPjs:      { word: "spotty pyjamas",  type: "pjs",     top: "#8cc47e", bottom: "#8cc47e", pattern: "dots" },
+    stripyPjs:      { word: "stripy pyjamas",  type: "pjs",     top: "#f0a65a", bottom: "#f0a65a", pattern: "stripes" },
+    unicornNightie: { word: "heart nightie",   type: "nightie", color: "#f7c6d6", pattern: "hearts", patColor: "#e5675c" }
+  },
+  hairStyles: { pigtails: "pigtails", ponytail: "ponytail", plaits: "plaits", bun: "bun", long: "long hair" },
+
+  plays: { couch: "bounce on the couch", bar: "gym bar", dance: "dance party" },
+
+  // food: four bites each
+  foods: {
+    cereal:    { word: "cereal",    art: "cereal" },
+    toast:     { word: "toast",     art: "toast" },
+    pancakes:  { word: "pancakes",  art: "pancakes" },
+    fruit:     { word: "fruit",     art: "fruit" },
+    spaghetti: { word: "spaghetti", art: "spaghetti" },
+    fishVeg:   { word: "fish and veggies", art: "fishVeg" },
+    sausages:  { word: "sausages",  art: "sausages" },
+    soup:      { word: "soup",      art: "soup" }
+  },
+
+  shows: { bunny: "Space Bunny", dino: "Dino Dance", fish: "Fishy Friends" },
+
+  // books: each page is [picture, word]
+  books: {
+    zoo:    { word: "Zoo Animals", cover: "elephant",  color: "#f4d36b", pages: [["kangaroo", "kangaroo"], ["koala", "koala"], ["penguin", "penguin"], ["elephant", "elephant"]] },
+    pets:   { word: "Pets",        cover: "puppy",     color: "#7aa9de", pages: [["puppy", "puppy"], ["guineaPig", "guinea pig"], ["fishbowl", "fish"], ["chicken", "chicken"]] },
+    garden: { word: "Garden",      cover: "butterfly", color: "#8cc47e", pages: [["butterfly", "butterfly"], ["frog", "frog"], ["duck", "duck"], ["cactus", "cactus"]] }
   },
 
   labels: {
     home: "Who's playing?",
-    choose: "Pack or unpack?",
+    choose: "Morning or night?",
+    wakeCurtains: "Open the curtains",
+    wakeTickle: "Tickle to wake up!",
+    dress: "Pick your clothes",
+    pjs: "Pick your pyjamas",
+    playPick: "What will you play?",
+    playTap: "Tap to play!",
+    bubbles: "Pop the bubbles!",
+    eatPick: "What would you like?",
+    eatTap: "Tap your food to eat",
+    yum: "Yum!",
+    teeth: "Scrub the germs away",
+    sparkly: "Sparkly clean!",
+    hairPick: "Pick a hair style",
+    bath: "Scrub-a-dub!",
+    showPick: "Pick a show",
+    bookPick: "Pick a book",
+    bookTap: "Tap to turn the page",
+    theEnd: "The End",
+    intoBed: "Hop into bed",
+    lightOff: "Turn off the light",
+    goodNight: "Good night",
+    goDrive: "Tap the car to drive",
+    goIn: "Walk to {place}",
+    morningDone: "Morning done!",
+    nightDone: "Night night!",
     find: "Find your things",
     silly: "Silly! Not for your bag",
     packed: "All packed!",
@@ -446,6 +543,175 @@ svg.art { display: block; width: 100%; height: 100%; overflow: visible; }
 @media (prefers-reduced-motion: reduce) {
   .pulse, .zone.glow, .cele-badge, .cele-fig, .car-wrap.tapme .car { animation: none !important; }
 }
+/* ---------- morning / night cards ---------- */
+.mode-card { grid-template-rows: minmax(0, 1fr) auto auto auto; }
+.mode-card .mode-art > span.mi { height: 46%; aspect-ratio: 1; align-self: flex-start; margin-top: 4%; }
+.mode-card .mode-art > span.fig-mini { height: calc(100% * var(--gh, 1)); aspect-ratio: 120 / 210; align-self: flex-end; }
+.mode-card .mode-art { aspect-ratio: 1.1; }
+.mode-steps { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; max-width: 100%; }
+.mode-steps .ms { width: clamp(30px, 3.6vw, 44px); aspect-ratio: 1; }
+.mode-card.r-night { background: #e7e9f7; }
+.mode-card.r-morning { background: #fff8e0; }
+
+/* ---------- routine layout: step rail + stage ---------- */
+.routine { height: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 2px 16px 14px; }
+.rail { display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 8px 6px; min-height: 0; }
+.rstep { position: relative; flex: 0 0 auto; width: clamp(46px, 6.6vh, 64px); aspect-ratio: 1; padding: 4px; border-radius: 14px; transition: background .2s; }
+.rstep .ic { display: block; width: 100%; height: 100%; }
+.rstep.now { background: rgba(244,211,107,.65); box-shadow: 0 0 0 3px var(--sun); }
+.rstep.done:not(.now) .ic { opacity: .45; }
+.rstep .tbox { position: absolute; right: -7px; bottom: -5px; width: 24px; height: 24px; border: 3px solid var(--ink); border-radius: 6px 8px 7px 6px; background: #fff; opacity: 0; transition: opacity .2s; }
+.rstep.done .tbox { opacity: 1; }
+.rstep .tbox svg { width: 130%; height: 130%; overflow: visible; margin: -15%; }
+.rstep.done .tick { stroke-dashoffset: 0; }
+.rdash { flex: 1 1 2px; width: 3px; max-height: 16px; min-height: 2px; background: var(--ink); opacity: .3; border-radius: 2px; }
+.rstage { position: relative; min-width: 0; min-height: 0; container-type: size; }
+.rstage > .game { padding: 0; }
+.rstage .strip .who { display: none; }
+.r-night .rail { background: #eef0fa; }
+
+/* "next up" card between steps */
+.next-card { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(247,240,225,.8); animation: enter .3s ease-out both; }
+.nc { display: flex; align-items: center; gap: 18px; padding: 16px 30px; font-size: clamp(30px, 4vw, 50px); transform: rotate(-1.5deg); }
+.nc-arrow { width: 44px; height: 74px; }
+.nc-ic { width: clamp(90px, 12vw, 140px); aspect-ratio: 1; }
+
+/* ---------- scenes (1600 x 1000) ---------- */
+.scene-wrap { position: absolute; inset: 0; container-type: size; display: grid; place-items: center; }
+.scene { position: relative; width: min(100cqw, 160cqh); aspect-ratio: 16 / 10; border: var(--line); border-radius: var(--wob); overflow: hidden; box-shadow: 6px 7px 0 var(--shadow); background: #fbf3e3; }
+.scene > svg.art { position: absolute; inset: 0; }
+.e { position: absolute; }
+.e > svg.art { position: absolute; inset: 0; }
+.tap { cursor: pointer; touch-action: none; }
+.glowy { animation: glowpulse2 1.4s ease-in-out infinite; border-radius: 30%; }
+@keyframes glowpulse2 { 50% { box-shadow: 0 0 0 8px var(--glow), 0 0 40px 16px var(--glow); background: rgba(255,246,200,.35); } }
+.dark { position: absolute; inset: 0; background: #1c2246; opacity: 0; pointer-events: none; transition: opacity 1.2s; }
+
+/* choices row */
+.choices { position: absolute; left: 2%; right: 2%; bottom: 3%; display: flex; justify-content: center; gap: 2%; z-index: 6; }
+.choice { flex: 0 1 22%; max-width: 230px; display: grid; justify-items: center; gap: 2px; padding: 8px 6px 6px; background: var(--card); transition: transform .15s; }
+.choice .ch-art { width: 72%; aspect-ratio: 1; }
+.choice .ch-word { font-size: clamp(14px, 1.7cqw, 22px); line-height: 1.05; text-align: center; }
+.choice.picked { background: #fff3c4; transform: translateY(-6px) rotate(-1deg); box-shadow: 6px 7px 0 var(--shadow), 0 0 0 4px var(--sun); }
+.choices.side { left: auto; right: 2%; top: 4%; bottom: 4%; flex-direction: column; width: 24%; gap: 3%; }
+.choices.side .choice { flex: 1 1 0; max-width: none; min-height: 0; }
+.choices.side .choice .ch-art { width: auto; height: 100%; min-height: 0; }
+.choices.side .choice { grid-template-rows: minmax(0, 1fr) auto; }
+
+/* big tick to move on */
+.done-btn { position: absolute; right: 14px; bottom: 14px; z-index: 15; width: clamp(88px, 11vmin, 116px); aspect-ratio: 1; border: var(--line); border-radius: 50%;
+  background: #e9f6df; box-shadow: 6px 7px 0 var(--shadow); display: grid; place-items: center; transform: scale(0); transition: transform .35s cubic-bezier(.3,1.6,.5,1); }
+.done-btn.show { transform: scale(1); }
+.done-btn.show::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; animation: ring 1.8s ease-in-out .8s infinite; }
+@keyframes ring { 50% { box-shadow: 0 0 0 8px var(--glow), 0 0 30px 12px var(--glow); } }
+.done-btn svg { width: 64%; height: 64%; }
+
+/* tools you drag (toothbrush, sponge, hairbrush) */
+.tool { position: absolute; z-index: 8; touch-action: none; transition: transform .15s; filter: drop-shadow(4px 6px 0 rgba(120,110,100,.3)); }
+.tool.held { transform: scale(1.08) rotate(-8deg); }
+.germ { position: absolute; z-index: 4; pointer-events: none; transition: opacity .15s; }
+.germ.pop { animation: germpop .35s ease-in forwards; }
+@keyframes germpop { to { transform: scale(1.6); opacity: 0; } }
+
+/* people in scenes */
+.who-fig { position: absolute; aspect-ratio: 120 / 210; }
+.bounce { animation: hop .5s ease-out; }
+.swing { transform-origin: 50% 7%; animation: swing 1.6s ease-in-out infinite alternate; }
+@keyframes swing { from { transform: rotate(14deg); } to { transform: rotate(-14deg); } }
+.flip { animation: flip .8s ease-in-out; transform-origin: 50% 50%; }
+@keyframes flip { to { transform: rotate(-360deg); } }
+.dance { animation: dance .5s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+@keyframes dance { from { transform: rotate(-8deg) translateY(0); } to { transform: rotate(8deg) translateY(-4%); } }
+.jumpy { animation: jumpy .45s ease-in-out infinite alternate; }
+@keyframes jumpy { to { transform: translateY(-14%); } }
+
+#celebrate.night { background: rgba(36, 42, 74, .95); color: #fff8e6; }
+#celebrate.night .big-btn { color: var(--ink); }
+
+@media (orientation: portrait) {
+  .routine { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .rail { flex-direction: row; padding: 6px 8px; }
+  .rstep { width: clamp(44px, 8.4vw, 66px); }
+  .rdash { width: auto; height: 3px; max-height: none; max-width: 14px; flex: 1 1 2px; }
+  .choices.side { left: 2%; right: 2%; top: auto; bottom: 3%; flex-direction: row; width: auto; height: 30%; }
+}
+
+/* ---------- wake up / bed ---------- */
+.lying { transform: rotate(-90deg); }
+.curtain { transition: transform 1.1s ease-in-out; z-index: 3; }
+.curtain.cl { transform-origin: 0 0; }
+.curtain.cr { transform-origin: 100% 0; }
+.curtain.cl.open { transform: translateX(-26%) scaleX(.4); }
+.curtain.cr.open { transform: translateX(26%) scaleX(.4); }
+.glowstars { opacity: 0; transition: opacity 1.6s; pointer-events: none; filter: drop-shadow(0 0 8px #e9ff9a); }
+.glowstars.on { opacity: 1; }
+
+/* ---------- dressing ---------- */
+.hanger { transition: opacity .3s; z-index: 2; }
+.hanger.lifted { visibility: hidden; }
+.hanger.worn { opacity: .25; }
+.brushing { z-index: 9; pointer-events: none; }
+
+/* ---------- play ---------- */
+.disco { position: absolute; inset: 0; pointer-events: none; }
+.disco span { position: absolute; width: 8%; aspect-ratio: 1; border-radius: 50%; opacity: .55; filter: blur(3px); animation: disco .9s ease-in-out infinite alternate; }
+@keyframes disco { to { opacity: .1; transform: scale(1.5); } }
+
+/* ---------- bubble game ---------- */
+.gbub { position: absolute; aspect-ratio: 1; border-radius: 50%; border: 4px solid #5d8fc9; z-index: 5; touch-action: none; cursor: pointer;
+  background: radial-gradient(circle at 32% 28%, #fff 0 14%, rgba(205,234,255,.55) 16%, rgba(255,214,240,.35) 70%, rgba(205,234,255,.6)); }
+.popcount { position: absolute; left: 50%; top: 3%; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px 10px; z-index: 6;
+  background: rgba(255,255,255,.88); border: 3px solid var(--ink); border-radius: 14px; }
+.popcount span { width: clamp(16px, 2.2cqw, 26px); aspect-ratio: 1; border-radius: 50%; border: 3px solid #5d8fc9; background: #fff; }
+.popcount span.on { background: #9fd3f0; }
+
+/* ---------- eat ---------- */
+.spoonfly { z-index: 7; pointer-events: none; }
+
+/* ---------- TV ---------- */
+.tvscreen { overflow: hidden; border-radius: 6px; background: #2f3b52; }
+.tvon { animation: tvon .4s ease-out; }
+@keyframes tvon { from { transform: scaleY(.05); filter: brightness(3); } }
+.tvbg { position: absolute; inset: 0; overflow: hidden; }
+.tv-bunny { background: #1d2550; }
+.tv-dino { background: linear-gradient(#bfe6ff 62%, #8cc47e 62%); }
+.tv-fish { background: linear-gradient(#7cc4e8, #3f88c5); }
+.tvc { position: absolute; }
+.tvc.rocket { width: 34%; aspect-ratio: 1; top: 28%; left: -40%; animation: fly 3.2s linear infinite; }
+@keyframes fly { 0% { transform: translate(0, 20%) rotate(10deg); } 50% { transform: translate(200%, -30%) rotate(-5deg); } 100% { transform: translate(420%, 10%) rotate(10deg); } }
+.tvc.dino { width: 46%; aspect-ratio: 1; left: 27%; top: 20%; animation: dance .4s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+.tvn { position: absolute; width: 10%; aspect-ratio: 40 / 50; animation: floatup 2s ease-out infinite; }
+.tvn.n1 { left: 14%; top: 40%; } .tvn.n2 { left: 78%; top: 30%; animation-delay: 1s; }
+@keyframes floatup { from { transform: translateY(30%); opacity: 0; } 30% { opacity: 1; } to { transform: translateY(-120%); opacity: 0; } }
+.tvc.f1, .tvc.f2, .tvc.f3 { width: 26%; aspect-ratio: 1; left: 105%; animation: swim 4s linear infinite; }
+.tvc.f1 { top: 8%; } .tvc.f2 { top: 40%; width: 20%; animation-duration: 5.5s; animation-delay: -2s; } .tvc.f3 { top: 66%; width: 16%; animation-duration: 3.4s; animation-delay: -1s; }
+@keyframes swim { to { transform: translateX(-800%); } }
+.st { position: absolute; width: 3%; aspect-ratio: 1; background: #fff6c8; border-radius: 50%; animation: twinkle 1s ease-in-out infinite alternate; }
+.st.s1 { left: 10%; top: 15%; } .st.s2 { left: 70%; top: 20%; animation-delay: .3s; } .st.s3 { left: 40%; top: 75%; animation-delay: .6s; } .st.s4 { left: 85%; top: 70%; animation-delay: .9s; }
+@keyframes twinkle { to { opacity: .2; transform: scale(.5); } }
+.tb { position: absolute; bottom: -10%; width: 5%; aspect-ratio: 1; border: 2px solid #fff; border-radius: 50%; animation: rise 3s linear infinite; }
+.tb.b1 { left: 20%; } .tb.b2 { left: 55%; animation-delay: 1s; } .tb.b3 { left: 80%; animation-delay: 2s; }
+@keyframes rise { to { transform: translateY(-1200%); } }
+.choices.small { justify-content: flex-start; left: 3%; }
+.choices.small .choice { flex-basis: 15%; }
+
+/* ---------- books ---------- */
+.bcover { display: grid; place-items: center; width: 100%; height: 100%; border: 4px solid var(--ink); border-radius: 6px 12px 12px 6px; box-shadow: inset 10px 0 0 rgba(0,0,0,.15); }
+.bcover svg { width: 78%; height: 78%; }
+.book { position: absolute; left: 14%; top: 6%; width: 72%; height: 82%; display: grid; grid-template-columns: 1fr 1fr; padding: 1.4%; z-index: 8; cursor: pointer;
+  background: var(--bc); border: var(--line); border-radius: 18px; box-shadow: 8px 10px 0 var(--shadow); perspective: 1400px; }
+.page { will-change: transform; position: relative; background: #fffdf6; border: 3px solid var(--ink); display: grid; place-items: center; align-content: center; gap: 4%; padding: 6%; min-height: 0; }
+.page.pl { border-radius: 10px 2px 2px 10px; transform-origin: 100% 50%; }
+.page.pr { border-radius: 2px 10px 10px 2px; transform-origin: 0 50%; }
+.ppic, .pcover { width: 92%; height: 92%; display: grid; place-items: center; min-height: 0; }
+.ppic svg, .pcover svg { max-height: 100%; }
+.pword, .ptitle { font-size: clamp(28px, 5cqw, 66px); text-align: center; line-height: 1.05; }
+.psmall { width: 26%; aspect-ratio: 1; }
+
+/* ---------- going to school ---------- */
+.car-wrap.going { transform: scaleX(-1); }
+.school-door { position: absolute; border-radius: 12px; }
+
 </style>
 </head>
 <body>
@@ -465,6 +731,23 @@ svg.art { display: block; width: 100%; height: 100%; overflow: visible; }
       <feComposite in="colour" in2="grainA" operator="in" result="colourGrain"/>
       <feOffset in="colourGrain" dx="2.6" dy="2.2" result="colourShift"/>
       <feOffset in="wob" dx="6" dy="6" result="sh"/>
+      <feFlood flood-color="#8f877e" flood-opacity=".42"/>
+      <feComposite in2="sh" operator="in" result="shadowFull"/>
+      <feComposite in="shadowFull" in2="wob" operator="out" result="shadow"/>
+      <feMerge><feMergeNode in="shadow"/><feMergeNode in="colourShift"/><feMergeNode in="ink"/></feMerge>
+    </filter>
+    <filter id="mkS" x="-8%" y="-8%" width="124%" height="124%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="2" seed="4" result="warp"/>
+      <feDisplacementMap in="SourceGraphic" in2="warp" scale="0.9" xChannelSelector="R" yChannelSelector="G" result="wob"/>
+      <feColorMatrix in="wob" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -4.25 -14.3 -1.44 0 7" result="dark"/>
+      <feComposite in="dark" in2="wob" operator="in" result="inkMask"/>
+      <feComposite in="wob" in2="inkMask" operator="in" result="ink"/>
+      <feComposite in="wob" in2="inkMask" operator="out" result="colour"/>
+      <feTurbulence type="fractalNoise" baseFrequency="2.4" numOctaves="1" seed="9" result="grain"/>
+      <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.3 0 0 0 2.25" result="grainA"/>
+      <feComposite in="colour" in2="grainA" operator="in" result="colourGrain"/>
+      <feOffset in="colourGrain" dx="0.9" dy="0.8" result="colourShift"/>
+      <feOffset in="wob" dx="1.8" dy="1.8" result="sh"/>
       <feFlood flood-color="#8f877e" flood-opacity=".42"/>
       <feComposite in2="sh" operator="in" result="shadowFull"/>
       <feComposite in="shadowFull" in2="wob" operator="out" result="shadow"/>
@@ -550,11 +833,11 @@ function todayKey() {
 /* ---------------- storage ---------------- */
 const Store = {
   KEY: 'packup.v2',
-  data: { settings: {}, progress: {}, history: [] },
+  data: { settings: {}, progress: {}, history: [], looks: {} },
   load() {
     try {
       const raw = localStorage.getItem(this.KEY);
-      if (raw) { const d = JSON.parse(raw); if (d && typeof d === 'object') this.data = { settings: d.settings || {}, progress: d.progress || {}, history: d.history || [] }; }
+      if (raw) { const d = JSON.parse(raw); if (d && typeof d === 'object') this.data = { settings: d.settings || {}, progress: d.progress || {}, history: d.history || [], looks: d.looks || {} }; }
     } catch (e) {}
     const today = todayKey();
     for (const k of Object.keys(this.data.progress)) if (!k.startsWith(today)) delete this.data.progress[k];
@@ -597,7 +880,8 @@ function shade(hex, amt) {
    ART — bikablo-style marker drawings with crayon colour (inline SVG)
    ===================================================================== */
 const INK = '#2b2523';
-const K = (w = 5) => `stroke="${INK}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"`;
+let KS = 1;   // line thickness scale (thinner for close-ups)
+const K = (w = 5) => `stroke="${INK}" stroke-width="${w * KS}" stroke-linecap="round" stroke-linejoin="round"`;
 const SKIN = '#fff3e6';
 
 function starPath(cx, cy, R, r, n = 5) {
@@ -626,6 +910,169 @@ const books = (x, y, w) => {
   while (cx < x + w - 12) { const bw = 10 + (i * 7) % 8, bh = 30 + (i * 13) % 14; s += `<rect x="${cx}" y="${y - bh}" width="${bw}" height="${bh}" fill="${cols[i % 6]}" ${K(3)}/>`; cx += bw + 1; i++; }
   return s;
 };
+
+/* =====================================================================
+   THE GIRLS — outfits, hair styles, poses and faces (drawn in 120 x 210)
+   ===================================================================== */
+const lerp = (a, b, t) => a + (b - a) * t;
+function dbl(d, col, w = 12, iw = 6.5) {
+  return `<path d="${d}" fill="none" ${K(w)}/><path d="${d}" fill="none" stroke="${col}" stroke-width="${iw * KS}" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+function heart(x, y, s, col) {
+  return `<path d="M${x} ${y + s * .9} C${x - s * 1.6} ${y - s * .2} ${x - s * .6} ${y - s * 1.3} ${x} ${y - s * .3} C${x + s * .6} ${y - s * 1.3} ${x + s * 1.6} ${y - s * .2} ${x} ${y + s * .9} Z" fill="${col}"/>`;
+}
+/* decorate a trapezoid: top edge (xl0..xr0 at y0), bottom edge (xl1..xr1 at y1) */
+function pattern(kind, [xl0, xr0, y0], [xl1, xr1, y1], col) {
+  const at = (y, f) => { const t = (y - y0) / (y1 - y0); return lerp(lerp(xl0, xl1, t), lerp(xr0, xr1, t), f); };
+  let s = '';
+  if (kind === 'dots' || kind === 'stars' || kind === 'hearts') {
+    const rows = Math.max(2, Math.round((y1 - y0) / 13));
+    for (let r = 0; r < rows; r++) {
+      const y = lerp(y0 + 6, y1 - 6, r / (rows - 1)), n = r % 2 ? 3 : 4;
+      for (let i = 0; i < n; i++) {
+        const x = at(y, (i + .5) / n);
+        if (kind === 'dots') s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="${col}"/>`;
+        else if (kind === 'stars') s += `<path d="${starPath(x, y, 3.8, 1.6)}" fill="${col}"/>`;
+        else s += heart(x, y, 2.4, col);
+      }
+    }
+  } else if (kind === 'check') {
+    for (let y = y0 + 7; y < y1 - 2; y += 9) s += `<path d="M${(at(y, 0) + 1).toFixed(1)} ${y} H${(at(y, 1) - 1).toFixed(1)}" stroke="${col}" stroke-width="2.2"/>`;
+    [.2, .4, .6, .8].forEach(f => s += `<path d="M${at(y0 + 1, f).toFixed(1)} ${y0 + 1} L${at(y1 - 1, f).toFixed(1)} ${y1 - 1}" stroke="${col}" stroke-width="2.2"/>`);
+  } else if (kind === 'stripes') {
+    for (let y = y0 + 6; y < y1 - 2; y += 9) s += `<path d="M${(at(y, 0) + 1).toFixed(1)} ${y} H${(at(y, 1) - 1).toFixed(1)}" stroke="${col}" stroke-width="4"/>`;
+  } else if (kind === 'rainbow') {
+    const cols = ['#e5675c', '#f0a65a', '#f4d36b', '#8cc47e', '#7aa9de', '#a98bd8'], n = cols.length;
+    cols.forEach((c, i) => {
+      const ya = lerp(y0, y1, i / n), yb = lerp(y0, y1, (i + 1) / n);
+      s += `<path d="M${at(ya, 0)} ${ya} L${at(ya, 1)} ${ya} L${at(yb, 1)} ${yb} L${at(yb, 0)} ${yb} Z" fill="${c}"/>`;
+    });
+  }
+  return s;
+}
+function garb(d, fill, kind, a, b, pcol) {
+  return `<path d="${d}" fill="${fill}"/>${kind ? pattern(kind, a, b, pcol) : ''}<path d="${d}" fill="none" ${K()}/>`;
+}
+const sleeves = col => `<path d="M48 97 L37 102 L41 113 L49 108 Z" fill="${col}" ${K(4)}/><path d="M72 97 L83 102 L79 113 L71 108 Z" fill="${col}" ${K(4)}/>`;
+const TORSO = 'M47 96 L73 96 L76 131 L44 131 Z';
+const SHORTS = 'M44 127 L76 127 L79 148 L63 148 L60 137 L57 148 L41 148 Z';
+
+/* each outfit returns its drawing, where the legs start (hem) and whether sleeves are long */
+function outfitParts(f) {
+  const t = f.type || 'dress', c = f.color || '#f29bb8', top = f.top || c, bot = f.bottom || c;
+  const pc = f.patColor || (f.pattern === 'check' ? shade(c, -.3) : '#fff');
+  switch (t) {
+    case 'bare': return { hem: 131, body: garb(TORSO, SKIN) };
+    case 'tee': return { hem: 146, body: sleeves(top) + garb(SHORTS, bot) + garb(TORSO, top, f.pattern, [47, 73, 96], [44, 76, 131], pc) };
+    case 'overalls': return { hem: 146, body: sleeves(top) + garb(TORSO, top, 'stripes', [47, 73, 96], [44, 76, 131], shade(top, .45)) + garb(SHORTS, bot) +
+      `<path d="M50 107 H70 V129 H50 Z" fill="${bot}" ${K(4)}/><path d="M50 108 L47 97 M70 108 L73 97" ${K(4)}/><path d="M55 116 H65" ${K(3)}/>
+       <circle cx="53" cy="111" r="2.2" fill="#f4d36b" ${K(1.5)}/><circle cx="67" cy="111" r="2.2" fill="#f4d36b" ${K(1.5)}/>` };
+    case 'tutu': return { hem: 138, body: garb('M42 124 Q60 119 78 124 L92 139 Q86 146 80 140 Q74 148 67 141 Q60 149 53 141 Q46 148 40 140 Q34 146 28 139 Z', bot) +
+      `<path d="M40 130 Q60 125 80 130 M36 136 Q60 131 84 136" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>` +
+      garb('M48 96 L72 96 L74 127 L46 127 Z', top, f.pattern, [48, 72, 96], [46, 74, 127], pc) };
+    case 'pjs': return { hem: 184, long: true, sleeve: top, feet: f.slipper || '#f7b6c9', body:
+      garb('M43 129 L77 129 L77 184 L63 184 L60 146 L57 184 L43 184 Z', bot, f.pattern, [43, 77, 129], [43, 77, 184], pc) +
+      garb('M47 96 L73 96 L78 134 L42 134 Z', top, f.pattern, [47, 73, 96], [42, 78, 134], pc) };
+    case 'nightie': return { hem: 180, long: true, sleeve: c, feet: f.slipper || '#fff3e6', body:
+      garb('M47 96 L73 96 L88 181 L32 181 Z', c, f.pattern, [47, 73, 96], [32, 88, 181], pc) + `<path d="M36 172 Q60 178 84 172" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>` };
+    default: return { hem: 154, body: sleeves(c) + garb('M47 96 L73 96 L88 158 L32 158 Z', c, f.pattern, [47, 73, 96], [32, 88, 158], pc) +
+      `<path d="M36 148 Q60 154 84 148" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M50 96 L60 106 L70 96" fill="#fff" ${K(3.5)}/>` };
+  }
+}
+
+/* hair: back layer (behind body), side layer (in front of shoulders), top layer (over the head) */
+const HAIR = {
+  back: {
+    long: (h, hd) => `<path d="M33 64 Q30 34 60 34 Q90 34 87 64 L92 118 Q76 126 60 122 Q44 126 28 118 Z" fill="${h}" ${K(4.5)}/>
+      <path d="M40 84 L37 112 M80 84 L83 112 M50 96 L48 118" stroke="${hd}" stroke-width="3.5" stroke-linecap="round"/>`,
+    ponytail: (h, hd) => `<path d="M76 40 Q104 36 106 68 Q107 94 94 108 Q97 86 90 72 Q84 60 74 54 Z" fill="${h}" ${K(4.5)}/>
+      <path d="M93 54 Q101 72 98 94" stroke="${hd}" stroke-width="3" fill="none" stroke-linecap="round"/>`,
+    messy: h => {
+      let d = '';
+      for (let k = 0, a = 150; a <= 390; a += 15, k++) { const r = k % 2 ? 31 : 39, x = 60 + r * Math.cos(a * Math.PI / 180), y = 62 + r * Math.sin(a * Math.PI / 180); d += (k ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1) + ' '; }
+      return `<path d="${d}Z" fill="${h}" ${K(4.5)}/>`;
+    }
+  },
+  side: {
+    pigtails: (h, hd, bob) => `<path d="M36 56 Q14 52 12 80 Q18 94 30 86 Q22 74 38 66 Z" fill="${h}" ${K(4.5)}/>
+      <path d="M84 56 Q106 52 108 80 Q102 94 90 86 Q98 74 82 66 Z" fill="${h}" ${K(4.5)}/>
+      <path d="M20 70 Q18 78 22 84 M100 70 Q102 78 98 84" stroke="${hd}" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="37" cy="58" r="5" fill="${bob}" ${K(3)}/><circle cx="83" cy="58" r="5" fill="${bob}" ${K(3)}/>`,
+    plaits: (h, hd, bob) => [36, 84].map(x => {
+      const dir = x < 60 ? -1 : 1; let p = '';
+      for (let i = 0; i < 6; i++) p += `<ellipse cx="${x + dir * i * 1.2}" cy="${76 + i * 8.5}" rx="6.5" ry="5.6" fill="${h}" ${K(3.5)}/><path d="M${x + dir * i * 1.2 - 4} ${74 + i * 8.5} q4 3 8 0" stroke="${hd}" stroke-width="2" fill="none"/>`;
+      const ex = x + dir * 7.2, ey = 127;
+      return p + `<path d="M${ex - 5} ${ey} L${ex} ${ey + 10} L${ex + 5} ${ey} Z" fill="${h}" ${K(3)}/><circle cx="${ex}" cy="${ey - 3}" r="4.5" fill="${bob}" ${K(3)}/>`;
+    }).join('')
+  },
+  top: {
+    pigtails: (h, hd) => `<path d="M34 66 Q33 38 60 38 Q87 38 86 66 Q80 52 70 50 Q60 56 50 50 Q40 52 34 66 Z" fill="${h}" ${K(4)}/><path d="M60 40 V52" stroke="${hd}" stroke-width="3" stroke-linecap="round"/>`,
+    long: h => `<path d="M35 64 Q35 40 60 40 Q85 40 85 64 Q76 50 66 55 Q60 46 52 55 Q44 50 35 64 Z" fill="${h}" ${K(4)}/>`,
+    ponytail: (h, hd, bob) => `<path d="M34 66 Q33 38 60 38 Q87 38 86 66 Q82 52 60 50 Q40 50 34 66 Z" fill="${h}" ${K(4)}/>
+      <path d="M44 48 Q60 40 78 44 M42 56 Q62 44 80 46" stroke="${hd}" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="80" cy="43" r="5" fill="${bob}" ${K(3)}/>`,
+    bun: (h, hd, bob) => `<circle cx="60" cy="29" r="13" fill="${h}" ${K(4.5)}/><path d="M52 26 Q60 20 68 27" stroke="${hd}" stroke-width="2.5" fill="none"/>
+      <path d="M34 66 Q33 40 60 40 Q87 40 86 66 Q80 52 60 51 Q40 52 34 66 Z" fill="${h}" ${K(4)}/><rect x="51" y="38" width="18" height="6" rx="3" fill="${bob}" ${K(2.5)}/>`,
+    messy: (h, hd) => `<path d="M34 66 Q30 40 60 38 Q90 40 86 66 Q80 50 70 56 Q62 44 54 56 Q44 48 34 66 Z" fill="${h}" ${K(4)}/>
+      <path d="M52 30 Q46 18 56 12 M68 30 Q76 16 68 8 M34 40 Q22 34 20 22 M86 40 Q100 32 100 20" fill="none" ${K(3)}/>`
+  }
+};
+HAIR.top.plaits = HAIR.top.pigtails;
+
+function face(o, L) {
+  const e = o.eyes || 'open', m = o.mouth || (o.pose === 'cheer' ? 'cheer' : 'smile'), lx = o.lookX || 0;
+  let s = '';
+  if (e === 'closed') s += `<path d="M46 67 Q51 72 56 67 M64 67 Q69 72 74 67" fill="none" ${K(3)}/>`;
+  else if (e === 'happy') s += `<path d="M46 70 Q51 63 56 70 M64 70 Q69 63 74 70" fill="none" ${K(3)}/>`;
+  else s += `<circle cx="${51 + lx}" cy="68" r="3.2" fill="${INK}"/><circle cx="${69 + lx}" cy="68" r="3.2" fill="${INK}"/>`;
+  s += `<circle cx="44" cy="77" r="${m === 'chew' ? 6 : 4.5}" fill="#f4a3a3"/><circle cx="76" cy="77" r="${m === 'chew' ? 6 : 4.5}" fill="#f4a3a3"/>`;
+  if (m === 'cheer') s += `<path d="M51 77 Q60 91 69 77 Z" fill="#e5675c" ${K(3.5)}/>`;
+  else if (m === 'teeth') s += `<ellipse cx="60" cy="82" rx="13" ry="9.5" fill="#8a2f3a" ${K(3.5)}/>
+      <path d="M48.6 78.4 Q60 74.6 71.4 78.4 L70.8 81.4 Q60 78.8 49.2 81.4 Z" fill="#fff"/><path d="M50.5 87.4 Q60 89.6 69.5 87.4 L68.8 85.2 Q60 87.2 51.2 85.2 Z" fill="#fff"/>
+      <ellipse cx="60" cy="88.6" rx="5" ry="1.6" fill="#ef7a9a"/>`;
+  else if (m === 'yawn') s += `<ellipse cx="60" cy="81" rx="5.5" ry="7.5" fill="#8a2f3a" ${K(3)}/>`;
+  else if (m === 'chew') s += `<path d="M53 80 q3.5 -3 7 0 q3.5 3 7 0" fill="none" ${K(3)}/>`;
+  else if (m === 'o') s += `<circle cx="60" cy="80" r="3.6" fill="#8a2f3a" ${K(2.5)}/>`;
+  else s += `<path d="M52 78 Q60 85 68 78" fill="none" ${K(3.5)}/>`;
+  if (L.freckles) s += [[48, 73], [52, 75.5], [45.5, 76.5], [72, 73], [68, 75.5], [74.5, 76.5]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.5" fill="#5a3826"/>`).join('');
+  return s;
+}
+
+function drawGirl(o) {
+  const L = o.look || {}, h = L.hair || '#9e6b3d', hd = L.hairDark || shade(h, -.2), bob = L.bobble || '#f29bb8';
+  const style = o.hair || L.style || 'pigtails';
+  const G = outfitParts(o.outfit || { type: 'dress', color: L.dress || '#f29bb8', pattern: 'dots' });
+  const pose = o.pose || 'stand';
+  const hand = (x, y) => `<circle cx="${x}" cy="${y}" r="5.5" fill="${SKIN}" ${K(3.5)}/>`;
+  const arm = (x1, y1, x2, y2, noHand) => (G.long ? dbl(`M${x1} ${y1} L${x2} ${y2}`, G.sleeve, 13, 7.5) : `<path d="M${x1} ${y1} L${x2} ${y2}" fill="none" ${K(5.5)}/>`) + (noHand ? '' : hand(x2, y2));
+  let s = (HAIR.back[style] || (() => ''))(h, hd, bob);
+  if (o.wear) s += `<g transform="translate(27 84) scale(0.22)">${ART.backpackParts(o.wear).closed}</g>`;
+  // legs and feet
+  const hem = G.hem;
+  if (pose === 'sit') {
+    if (hem < 170) s += `<path d="M52 ${hem} L50 172 M68 ${hem} L70 172" fill="none" ${K(5.5)}/>`;
+    s += G.feet ? `<ellipse cx="50" cy="${Math.max(hem, 172) + 3}" rx="7" ry="4.5" fill="${G.feet}" ${K(3)}/><ellipse cx="70" cy="${Math.max(hem, 172) + 3}" rx="7" ry="4.5" fill="${G.feet}" ${K(3)}/>`
+      : `<path d="M44 176 H55 M65 176 H76" ${K(10)}/>`;
+  } else if (G.feet) {
+    s += `<g class="leg leg-l"><ellipse cx="50" cy="188" rx="8" ry="5" fill="${G.feet}" ${K(3)}/></g><g class="leg leg-r"><ellipse cx="70" cy="188" rx="8" ry="5" fill="${G.feet}" ${K(3)}/></g>`;
+  } else {
+    s += `<g class="leg leg-l"><path d="M51 ${hem} V188" fill="none" ${K(5.5)}/><path d="M43 192 H56" ${K(10)}/></g><g class="leg leg-r"><path d="M69 ${hem} V188" fill="none" ${K(5.5)}/><path d="M64 192 H77" ${K(10)}/></g>`;
+  }
+  // arms (drawn before the clothes so sleeves cover the shoulders)
+  if (pose === 'cheer') s += arm(46, 104, 27, 70) + arm(74, 104, 93, 70);
+  else if (pose === 'hang') s += arm(48, 102, 46, 14) + arm(72, 102, 74, 14);
+  else if (pose === 'wave') s += arm(46, 104, 32, 138) + `<g class="wave-arm">${arm(74, 104, 94, 72)}</g>`;
+  else if (pose === 'sit') s += arm(46, 104, 36, 128) + arm(74, 104, 84, 128);
+  else if (o.carry) s += arm(46, 104, 32, 138) + arm(74, 104, 86, 132, true);
+  else s += arm(46, 104, 32, 138) + arm(74, 104, 88, 138);
+  s += G.body;
+  if (o.wear) { const sc = o.wear.color; s += ['M50 98 Q45 116 49 134', 'M70 98 Q75 116 71 134'].map(d => dbl(d, sc, 10, 5)).join(''); }
+  if (o.carry) s += `<g transform="translate(66 126) scale(0.17)">${ART.backpackParts(o.carry).closed}</g>` + hand(86, 134);
+  s += (HAIR.side[style] || (() => ''))(h, hd, bob);
+  s += `<circle cx="60" cy="66" r="26" fill="${SKIN}" ${K()}/>`;
+  s += (HAIR.top[style] || HAIR.top.long)(h, hd, bob);
+  if (L.clip === 'star' && style !== 'messy') s += `<path d="${starPath(79, 48, 7, 3)}" fill="#f4d36b" ${K(2.5)}/>`;
+  return s + face(o, L);
+}
 
 const ART = {
   /* ---------- things for the bag ---------- */
@@ -766,39 +1213,8 @@ const ART = {
   },
   backpackClosed: { vb: '0 0 300 340', draw: o => ART.backpackParts(o).closed },
 
-  /* ---------- the girls ---------- */
-  figure: { vb: '0 0 120 210', draw: o => {
-    const L = o.look || {}, hair = L.hair || '#d6ae6f', hd = L.hairDark || '#a77d47', dress = L.dress || '#f29bb8';
-    const limb = (d, w = 5.5) => `<path d="${d}" fill="none" ${K(w)}/>`;
-    const hand = (x, y) => `<circle cx="${x}" cy="${y}" r="5.5" fill="${SKIN}" ${K(3.5)}/>`;
-    let s = '';
-    if (L.style === 'long') s += `<path d="M33 64 Q30 34 60 34 Q90 34 87 64 L92 118 Q76 126 60 122 Q44 126 28 118 Z" fill="${hair}" ${K(4.5)}/>
-      <path d="M40 84 L37 112 M80 84 L83 112 M50 96 L48 118" stroke="${hd}" stroke-width="3.5" stroke-linecap="round"/>`;
-    if (o.wear) s += `<g transform="translate(27 84) scale(0.22)">${ART.backpackParts(o.wear).closed}</g>`;
-    s += `<g class="leg leg-l">${limb('M51 154 V188')}<path d="M43 192 H56" ${K(10)}/></g><g class="leg leg-r">${limb('M69 154 V188')}<path d="M64 192 H77" ${K(10)}/></g>`;
-    if (o.pose === 'cheer') s += limb('M46 104 L27 70') + hand(26, 66) + limb('M74 104 L93 70') + hand(94, 66);
-    else if (o.carry) s += limb('M46 104 L32 138') + hand(31, 141) + limb('M74 104 L86 132');
-    else s += limb('M46 104 L32 138') + hand(31, 141) + limb('M74 104 L88 138') + hand(89, 141);
-    s += `<path d="M47 96 L32 158 H88 L73 96 Z" fill="${dress}" ${K()}/>
-      <path d="M36 146 Q60 152 84 146" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
-      <circle cx="52" cy="124" r="3" fill="#fff"/><circle cx="68" cy="118" r="3" fill="#fff"/><circle cx="62" cy="134" r="3" fill="#fff"/>
-      <path d="M50 96 L60 106 L70 96" fill="#fff" ${K(3.5)}/>`;
-    if (o.wear) { const sc = o.wear.color; s += [['M50 98 Q45 116 49 134'], ['M70 98 Q75 116 71 134']].map(([d]) => `<path d="${d}" fill="none" ${K(10)}/><path d="${d}" fill="none" stroke="${sc}" stroke-width="5" stroke-linecap="round"/>`).join(''); }
-    if (o.carry) s += `<g transform="translate(66 126) scale(0.17)">${ART.backpackParts(o.carry).closed}</g>` + hand(86, 134);
-    if (L.style === 'pigtails') s += `<path d="M36 56 Q14 52 12 80 Q18 94 30 86 Q22 74 38 66 Z" fill="${hair}" ${K(4.5)}/>
-      <path d="M84 56 Q106 52 108 80 Q102 94 90 86 Q98 74 82 66 Z" fill="${hair}" ${K(4.5)}/>
-      <path d="M20 70 Q18 78 22 84 M100 70 Q102 78 98 84" stroke="${hd}" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <circle cx="37" cy="58" r="5" fill="#f29bb8" ${K(3)}/><circle cx="83" cy="58" r="5" fill="#f29bb8" ${K(3)}/>`;
-    s += `<circle cx="60" cy="66" r="26" fill="${SKIN}" ${K()}/>`;
-    if (L.style === 'pigtails') s += `<path d="M34 66 Q33 38 60 38 Q87 38 86 66 Q80 52 70 50 Q60 56 50 50 Q40 52 34 66 Z" fill="${hair}" ${K(4)}/><path d="M60 40 V52" stroke="${hd}" stroke-width="3" stroke-linecap="round"/>`;
-    else s += `<path d="M35 64 Q35 40 60 40 Q85 40 85 64 Q76 50 66 55 Q60 46 52 55 Q44 50 35 64 Z" fill="${hair}" ${K(4)}/>
-      <path d="${starPath(79, 48, 7, 3)}" fill="#f4d36b" ${K(2.5)}/>`;
-    s += `<circle cx="51" cy="68" r="3.2" fill="${INK}"/><circle cx="69" cy="68" r="3.2" fill="${INK}"/>
-      <circle cx="44" cy="77" r="4.5" fill="#f4a3a3"/><circle cx="76" cy="77" r="4.5" fill="#f4a3a3"/>`;
-    s += o.pose === 'cheer' ? `<path d="M51 77 Q60 91 69 77 Z" fill="#e5675c" ${K(3.5)}/>` : `<path d="M52 78 Q60 85 68 78" fill="none" ${K(3.5)}/>`;
-    if (L.freckles) s += [[48, 73], [52, 75.5], [45.5, 76.5], [72, 73], [68, 75.5], [74.5, 76.5]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.5" fill="#5a3826"/>`).join('');
-    return s;
-  } },
+  /* ---------- the girls (see drawGirl) ---------- */
+  figure: { vb: '0 0 120 210', draw: o => drawGirl(o) },
 
   /* ---------- the house for hide-and-seek (1000 x 600) ---------- */
   house: { vb: '0 0 1000 600', draw: () => {
@@ -1060,7 +1476,9 @@ const roomLabels = () => Object.entries(HOUSE.labels).map(([r, [x, y]]) => `<spa
 function art(name, opts = {}, cls = '') {
   const a = ART[name];
   if (!a) return '';
-  return `<svg class="art ${cls}" viewBox="${a.vb}" aria-hidden="true" focusable="false"><g filter="url(#mk)">${a.draw(opts)}</g></svg>`;
+  const prev = KS; KS = a.ks || 1;
+  let body; try { body = a.draw(opts); } finally { KS = prev; }
+  return `<svg class="art ${cls}" viewBox="${a.vb}" aria-hidden="true" focusable="false"><g filter="url(#${a.filter || 'mk'})">${body}</g></svg>`;
 }
 /* every item drawing goes through here (LATER: real photos — return <img src=item.photo>) */
 function itemArt(item) { return art(item.art, item); }
@@ -1069,7 +1487,23 @@ function backpackHTML(bp, state, extra = '') {
   const L = (cls, inner) => `<svg class="art bp-layer ${cls}" viewBox="0 0 300 340" aria-hidden="true"><g filter="url(#mk)">${inner}</g></svg>`;
   return `<div class="backpack ${state} ${extra}"><div class="bp-inner">${L('bp-closed', p.closed)}${L('bp-back', p.back)}<div class="bp-peek"></div>${L('bp-front', p.front)}</div></div>`;
 }
-const figure = (child, o = {}) => art('figure', { look: child.look, ...o });
+function lookOf(c) { const l = Store.data.looks[c.id] || {}; return { outfit: l.outfit || c.outfit, pyjamas: l.pyjamas || c.pyjamas, hair: l.hair || c.look.style }; }
+function setLook(c, k, v) { (Store.data.looks[c.id] ||= {})[k] = v; Store.save(); }
+function outfitDef(id) { return CONFIG.outfits[id] || CONFIG.pyjamas[id] || Object.values(CONFIG.outfits)[0]; }
+/* what she's wearing right now: pyjamas before getting dressed / after pyjama time, messy hair until it's done */
+function wearNow(c) {
+  const l = lookOf(c); let outfit = l.outfit, hair = l.hair;
+  const r = S.routine && CONFIG.routines[S.routine];
+  if (r && S.child === c) {
+    const i = S.stepIndex || 0, find = f => r.steps.findIndex(id => { const st = CONFIG.steps[id] || {}; return f(st); });
+    const dI = find(st => st.kind === 'dress' && st.set === 'outfits'), pI = find(st => st.kind === 'dress' && st.set === 'pyjamas'), hI = find(st => st.kind === 'hair');
+    if (dI >= 0 && i <= dI) outfit = l.pyjamas;
+    if (pI >= 0 && i > pI) outfit = l.pyjamas;
+    if (hI >= 0 && i <= hI) hair = 'messy';
+  }
+  return { outfit: outfitDef(outfit), hair };
+}
+const figure = (child, o = {}) => art('figure', { look: child.look, ...wearNow(child), ...o });
 const badge = child => art(child.badge === 'star' ? 'star' : 'moon', {}, 'badge');
 const ribbon = child => `<span class="ribbon" style="--accent:${child.accent}"><span class="rb">${child.name}${badge(child)}</span></span>`;
 
@@ -1504,6 +1938,7 @@ function go(name, params = {}) {
   Hint.stop();
   $$('#fx-layer .fx, #fx-layer .bubble').forEach(e => e.remove());
   Object.assign(S, params);
+  if (name !== 'routine') { S.routine = null; S.stepIndex = 0; }
   S.screen = name; S.help = () => {};
   S.ctx = { day: currentDay() };
   $('#btnBack').classList.toggle('invisible', name === 'home');
@@ -1514,7 +1949,7 @@ function go(name, params = {}) {
   screen.firstElementChild?.classList.add('enter');
 }
 function back() {
-  if (S.screen === 'pack' || S.screen === 'unpack') go('mode');
+  if (S.screen === 'routine') go('mode');
   else go('home', { child: null });
 }
 
@@ -1586,25 +2021,8 @@ const SCREENS = {
     $$('.kid-card', screen).forEach(b => b.addEventListener('click', () => { Sfx.play('pop'); go('mode', { child: CONFIG.children.find(c => c.id === b.dataset.child) }); }));
   },
 
-  /* ---------- 2. morning or after school ---------- */
-  mode() {
-    const c = S.child, extra = itemsFor(c, S.ctx).filter(i => i.days), M = CONFIG.modes;
-    setBanner([badge(c)], `${c.name} · ${CONFIG.labels.choose}`);
-    screen.innerHTML = `<div class="modes">
-      <button class="mode-card box-b" data-mode="pack">
-        <span class="mode-art"><span>${art('sun')}</span><span>${art('backpackClosed', c.backpack)}</span></span>
-        <span class="mode-time">${M.pack.time}</span><span class="mode-word">${M.pack.word}</span>
-        ${extra.length ? `<span class="today-chip">${DAY_SHORT[S.ctx.day]} ${extra.map(i => `<span class="ic">${itemArt(i)}</span>`).join('')}</span>` : ''}
-      </button>
-      <button class="mode-card box-b" data-mode="unpack">
-        <span class="mode-art"><span class="wide">${art('car')}</span><span>${art('houseIcon')}</span></span>
-        <span class="mode-time">${c.afterWord}</span><span class="mode-word">${M.unpack.word}</span>
-      </button></div>`;
-    $$('.mode-card', screen).forEach(b => b.addEventListener('click', () => { Sfx.play('pop'); go(b.dataset.mode); }));
-  },
-
   /* ---------- 3. morning: find things around the house and pack them ---------- */
-  pack() {
+  pack(root, def, done) {
     const c = S.child, ctx = S.ctx, L = CONFIG.labels, tk = S.token, alive = () => tk === S.token;
     const items = itemsFor(c, ctx);
     let prog = getProg('pack');
@@ -1623,7 +2041,7 @@ const SCREENS = {
     const objs = [...items.filter(i => !isDone(i.id)).map(i => ({ ...i, kind: 'item' })), ...prog.decoys.map(id => ({ ...CONFIG.decoys[id], id, kind: 'decoy' }))]
       .filter(o => prog.layout[o.id]);
 
-    screen.innerHTML = `<div class="game">
+    root.innerHTML = `<div class="game">
       ${stripHTML(c, items.map(i => ({ id: i.id, icon: itemArt(i), word: i.word, done: isDone(i.id), day: i.days ? DAY_SHORT[ctx.day] : '' })))}
       <div class="pack-main">
         <div class="house-wrap"><div class="house">${art('house')}
@@ -1696,7 +2114,7 @@ const SCREENS = {
       for (let i = 0; i < 6; i++) Sfx.play('step', i * .34);
       await finished(girl.animate([{ transform: 'none' }, { offset: .8, transform: `translateX(${dx - gx}px)`, opacity: 1 }, { transform: `translateX(${dx - gx + 30}px) scale(.9)`, opacity: 0 }], { duration: 1900, easing: 'linear', fill: 'forwards' }));
       if (!alive()) return;
-      celebrate('pack');
+      done();
     }
 
     S.help = () => {
@@ -1708,9 +2126,9 @@ const SCREENS = {
   },
 
   /* ---------- 4. after school: drive home, carry the bag in, unpack ---------- */
-  unpack() {
+  unpack(root, def, done) {
     const c = S.child, ctx = S.ctx, L = CONFIG.labels, tk = S.token, alive = () => tk === S.token;
-    const items = itemsFor(c, ctx), steps = CONFIG.modes.unpack.steps;
+    const items = itemsFor(c, ctx), steps = ['driveHome', 'bringIn', 'openBag', 'putAway'];
     let prog = getProg('unpack');
     if (!prog.step) prog.step = steps[0];
     prog.done = prog.done.filter(id => items.some(i => i.id === id));
@@ -1728,7 +2146,7 @@ const SCREENS = {
     if (steps.includes('openBag')) cells.push({ id: '_open', icon: art('backpackClosed', c.backpack), word: L.cellOpen, done: after('openBag'), step: 1 });
     items.forEach(i => cells.push({ id: i.id, icon: itemArt(i), word: i.word, done: isDone(i.id) }));
 
-    screen.innerHTML = `<div class="game">${stripHTML(c, cells)}<section class="play unpack-play"></section></div>`;
+    root.innerHTML = `<div class="game">${stripHTML(c, cells)}<section class="play unpack-play"></section></div>`;
     const play = $('.unpack-play', screen);
     $$('.cell', screen).forEach(cell => cell.addEventListener('click', () => { wiggle(cell); Sfx.play('pop'); bubble(cell, cell.dataset.word); }));
 
@@ -1903,7 +2321,7 @@ const SCREENS = {
         bag.classList.replace('open', 'closed'); setZip(bag, true);
         await zipAnim(bag, false, 700); if (!alive()) return;
         await wait(500); if (!alive()) return;
-        celebrate('unpack');
+        done();
       }
 
       /* something silly pops out of the bag */
@@ -1926,39 +2344,18 @@ const SCREENS = {
   }
 };
 
-/* ---------- 5. celebration ---------- */
-function celebrate(mode) {
-  const c = S.child, L = CONFIG.labels;
-  Hint.stop();
-  Store.data.history.push({ date: todayKey(), child: c.id, mode, day: DAYS[S.ctx.day], t: Date.now() });
-  delete Store.data.progress[progKey(mode)];
-  Store.save();
-  const ov = $('#celebrate');
-  $('.cele-fig', ov).style.setProperty('--gh', c.look.height);
-  $('.cele-fig', ov).innerHTML = figure(c, { pose: 'cheer' });
-  $('.cele-badge', ov).innerHTML = badge(c);
-  $('.cele-title', ov).textContent = `${L.hooray}, ${c.name}!`;
-  $('.cele-sub', ov).innerHTML = `<span class="ic">${art('backpackClosed', c.backpack)}</span>${mode === 'pack' ? L.packed : L.unpacked}`;
-  $('#celeAgain').innerHTML = `${art('replay')}${L.play}`;
-  $('#celeDone').innerHTML = `${art('tick')}${L.done}`;
-  ov.hidden = false;
-  Sfx.play('cheer');
-  Confetti.start();
-  $('#celeAgain').onclick = () => { closeCele(); Sfx.play('pop'); go(mode); };
-  $('#celeDone').onclick = () => { closeCele(); Sfx.play('pop'); go('home', { child: null }); };
-}
 function closeCele() { $('#celebrate').hidden = true; Confetti.stop(); }
 
 const Confetti = {
   raf: 0, parts: [],
-  start() {
+  start(night) {
     const cv = $('#confetti'), dpr = Math.min(2, devicePixelRatio || 1);
     cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
     const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const cols = ['#e5675c', '#f0a65a', '#f4d36b', '#8cc47e', '#7aa9de', '#a98bd8', '#ef9ab8'];
     this.parts = Array.from({ length: reduceMotion ? 18 : 70 }, (_, i) => ({
-      x: Math.random() * innerWidth, y: -20 - Math.random() * innerHeight * .9, vy: 1.2 + Math.random() * 1.6,
-      sway: Math.random() * 6.3, sw: .6 + Math.random(), r: 7 + Math.random() * 9, rot: Math.random() * 6, vr: (Math.random() - .5) * .06, c: cols[i % 7], k: i % 3 }));
+      x: Math.random() * innerWidth, y: -20 - Math.random() * innerHeight * .9, vy: night ? .5 + Math.random() * .7 : 1.2 + Math.random() * 1.6,
+      sway: Math.random() * 6.3, sw: .6 + Math.random(), r: 7 + Math.random() * 9, rot: Math.random() * 6, vr: (Math.random() - .5) * .06, c: night ? ['#f4d36b', '#fff6c8', '#cfe3ff'][i % 3] : cols[i % 7], k: night ? 0 : i % 3 }));
     const t0 = performance.now();
     const step = t => {
       const age = (t - t0) / 1000;
@@ -1979,6 +2376,925 @@ const Confetti = {
   stop() { cancelAnimationFrame(this.raf); const cv = $('#confetti'); cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); }
 };
 
+/* =====================================================================
+   ROUTINES — morning and night, one step after another
+   ===================================================================== */
+const STEPS = {
+  pack:   (root, def, done) => SCREENS.pack(root, def, done),
+  unpack: (root, def, done) => SCREENS.unpack(root, def, done)
+};
+const STEP_ICON = { wakeUp: 'alarm', dress: 'hanger', play: 'playIcon', bubbles: 'bubbleWand', teeth: 'toothbrush', hair: 'hairbrush',
+  goOut: 'school', unpack: 'houseIcon', bath: 'bathIcon', shows: 'tv', books: 'bookIcon', bed: 'bedIcon' };
+function stepDef(id) { return CONFIG.steps[id] || { word: id, kind: id }; }
+function stepWord(id) { return String(stepDef(id).word || id).replace('{place}', S.child?.fromWord || 'school'); }
+function stepIcon(id, child = S.child) {
+  const d = stepDef(id);
+  if (d.icon) return art(d.icon);
+  if (d.kind === 'pack') return art('backpackClosed', child.backpack);
+  if (d.kind === 'dress' && d.set === 'pyjamas') return art('pjIcon');
+  if (d.kind === 'eat') return art((CONFIG.foods[d.menu?.[0]] || {}).art || 'cereal');
+  return art(STEP_ICON[d.kind] || 'star');
+}
+const place = s => String(s).replace('{place}', S.child?.fromWord || 'school');
+function rKey() { return `${todayKey()}|${S.child.id}|routine:${S.routine}`; }
+function rProg(fresh) { const k = rKey(); if (fresh || !Store.data.progress[k]) Store.data.progress[k] = { done: [] }; return Store.data.progress[k]; }
+function clearFx() { $$('#fx-layer .fx, #fx-layer .bubble').forEach(e => e.remove()); }
+
+/* ---------- shared bits for the steps ---------- */
+const P16 = (x, y, w, h) => `left:${x / 16}%;top:${y / 10}%;width:${w / 16}%;height:${h / 10}%`;   // place in a 1600 x 1000 scene
+function sceneBox(root, bg, cls = '') {
+  root.innerHTML = `<div class="scene-wrap"><div class="scene ${cls}">${bg ? art(bg) : ''}</div></div>`;
+  return $('.scene', root);
+}
+function el(parent, cls, style, html = '') {
+  const d = document.createElement('div'); d.className = cls; if (style) d.setAttribute('style', style); d.innerHTML = html; parent.appendChild(d); return d;
+}
+function doneBtn(root, cb) {
+  let b = $('.done-btn', root);
+  if (!b) { b = document.createElement('button'); b.className = 'done-btn'; b.setAttribute('aria-label', 'Done'); b.innerHTML = art('tick'); root.appendChild(b);
+    b.addEventListener('click', () => { Sfx.play('pop'); b.classList.remove('show'); cb(); }); }
+  later(() => b.classList.add('show'), 50);
+  return b;
+}
+function choiceRow(parent, list, onPick, cls = '') {
+  const row = el(parent, 'choices ' + cls, '', list.map(o => `<button class="choice box-b" data-id="${o.id}"><span class="ch-art">${o.html}</span><span class="ch-word">${o.word}</span></button>`).join(''));
+  $$('.choice', row).forEach(b => b.addEventListener('click', () => {
+    $$('.choice', row).forEach(x => x.classList.toggle('picked', x === b)); Sfx.play('pop'); onPick(b.dataset.id, b);
+  }));
+  return row;
+}
+/* scrub helper: drag a tool over spots until they're gone (teeth, bath) */
+function scrubber(tool, spots, opts) {
+  let last = null, active = false, dx = 0, dy = 0;
+  const left = () => spots.filter(s => !s.gone);
+  tool.addEventListener('pointerdown', e => {
+    e.preventDefault(); Hint.stop(); active = true; last = [e.clientX, e.clientY];
+    const r = tool.getBoundingClientRect(); dx = e.clientX - r.left; dy = e.clientY - r.top;
+    tool.classList.add('held'); opts.onStart?.();
+    const move = ev => {
+      if (!active) return; ev.preventDefault();
+      const host = tool.offsetParent.getBoundingClientRect();
+      tool.style.left = ((ev.clientX - dx - host.left) / host.width * 100) + '%';
+      tool.style.top = ((ev.clientY - dy - host.top) / host.height * 100) + '%';
+      const dist = Math.hypot(ev.clientX - last[0], ev.clientY - last[1]); last = [ev.clientX, ev.clientY];
+      const tr = tool.getBoundingClientRect(), hx = tr.left + tr.width * (opts.headX ?? .2), hy = tr.top + tr.height * (opts.headY ?? .2);
+      for (const sp of left()) {
+        const r = sp.el.getBoundingClientRect(), pad = r.width * .35;
+        if (hx > r.left - pad && hx < r.right + pad && hy > r.top - pad && hy < r.bottom + pad) {
+          sp.work = (sp.work || 0) + dist;
+          sp.el.style.opacity = Math.max(.15, 1 - sp.work / (opts.need || 300));
+          if (Math.random() < .25) opts.onScrub?.(hx, hy);
+          if (sp.work > (opts.need || 300)) { sp.gone = true; opts.onClean(sp); if (!left().length) { opts.onAll(); } }
+        }
+      }
+    };
+    const up = () => { active = false; tool.classList.remove('held'); removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
+    addEventListener('pointermove', move, { passive: false }); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  });
+}
+function foam(x, y, n = 2, col) {
+  for (let i = 0; i < n; i++) {
+    const s = rand(14, 30);
+    fxSpawn('', 'bub', x + rand(-25, 25), y + rand(-15, 15), s, s, [{ opacity: 0, t: 'scale(.3)' }, { opacity: .95, dy: -10, t: 'scale(1)' }, { opacity: 0, dx: rand(-30, 30), dy: -60, t: 'scale(1.3)' }], 900);
+  }
+}
+function sparkleAt(x, y, n = 6) {
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2, d = rand(40, 90);
+    fxSpawn(art('sparkleStar'), '', x, y, 30, 30, [{ opacity: 0, t: 'scale(.2)' }, { opacity: 1, dx: Math.cos(a) * d * .6, dy: Math.sin(a) * d * .6, t: 'scale(1) rotate(40deg)' }, { opacity: 0, dx: Math.cos(a) * d, dy: Math.sin(a) * d, t: 'scale(.4) rotate(90deg)' }], 900);
+  }
+}
+
+/* ---------- morning or night ---------- */
+SCREENS.mode = function () {
+  const c = S.child, extra = itemsFor(c, S.ctx).filter(i => i.days), lk = lookOf(c);
+  setBanner([badge(c)], `${c.name} · ${CONFIG.labels.choose}`);
+  const pj = outfitDef(lk.pyjamas);
+  const pics = {
+    morning: figure(c, { outfit: pj, hair: 'messy', mouth: 'yawn', pose: 'cheer' }),
+    night: figure(c, { outfit: pj, eyes: 'happy' })
+  };
+  screen.innerHTML = `<div class="modes">${Object.entries(CONFIG.routines).map(([id, r]) => `
+    <button class="mode-card box-b r-${id}" data-routine="${id}">
+      <span class="mode-art"><span class="mi">${art(r.icon)}</span><span class="fig-mini" style="--gh:${c.look.height}">${pics[id] || figure(c)}</span></span>
+      <span class="mode-word">${r.word}</span>
+      <span class="mode-steps">${r.steps.map(sid => `<span class="ms">${stepIcon(sid)}</span>`).join('')}</span>
+      ${id === 'morning' && extra.length ? `<span class="today-chip">${DAY_SHORT[S.ctx.day]} ${extra.map(i => `<span class="ic">${itemArt(i)}</span>`).join('')}</span>` : ''}
+    </button>`).join('')}</div>`;
+  $$('.mode-card', screen).forEach(b => b.addEventListener('click', () => { Sfx.play('pop'); go('routine', { routine: b.dataset.routine }); }));
+};
+
+/* ---------- a routine ---------- */
+SCREENS.routine = function () {
+  const r = CONFIG.routines[S.routine];
+  let prog = rProg();
+  if (r.steps.every(id => prog.done.includes(id))) prog = rProg(true);
+  Store.save();
+  screen.innerHTML = `<div class="routine r-${S.routine}">
+    <nav class="rail box-b">${r.steps.map((id, i) => `<button class="rstep ${prog.done.includes(id) ? 'done' : ''}" data-i="${i}">
+      <span class="ic">${stepIcon(id)}</span><span class="tbox"><svg viewBox="0 0 40 40"><path class="tick" d="M7 21 L16 31 L35 6"/></svg></span></button>`).join('<span class="rdash"></span>')}</nav>
+    <section class="rstage"></section></div>`;
+  $$('.rstep', screen).forEach(b => b.addEventListener('click', () => {
+    const i = +b.dataset.i; Sfx.play('pop'); bubble(b, stepWord(r.steps[i]));
+    if (i !== S.stepIndex) runStep(i);
+  }));
+  const first = r.steps.findIndex(id => !prog.done.includes(id));
+  runStep(first < 0 ? 0 : first);
+};
+
+function runStep(i) {
+  const r = CONFIG.routines[S.routine], id = r.steps[i], d = stepDef(id);
+  S.timers.forEach(clearTimeout); S.timers = []; S.token++;
+  Hint.stop(); clearFx();
+  S.stepIndex = i; S.help = () => {};
+  $$('.rstep', screen).forEach((b, j) => b.classList.toggle('now', j === i));
+  const stage = $('.rstage', screen); stage.innerHTML = '';
+  const tk = S.token;
+  setBanner([stepIcon(id)], stepWord(id));
+  const fn = STEPS[d.kind];
+  if (fn) fn(stage, d, () => { if (tk === S.token) stepDone(i); }, id);
+  stage.firstElementChild?.classList.add('enter');
+}
+
+function stepDone(i) {
+  const r = CONFIG.routines[S.routine], id = r.steps[i], prog = rProg();
+  if (!prog.done.includes(id)) prog.done.push(id);
+  Store.save();
+  const cell = $$('.rstep', screen)[i]; if (cell) { cell.classList.add('done'); flash(cell, 'pop'); }
+  Sfx.play('tick'); Sfx.play('sparkle', .15);
+  S.timers.forEach(clearTimeout); S.timers = []; const tk = ++S.token; Hint.stop();
+  if (r.steps.every(sid => prog.done.includes(sid))) { later(() => tk === S.token && celebrate(S.routine), 700); return; }
+  let next = r.steps.findIndex((sid, j) => j > i && !prog.done.includes(sid));
+  if (next < 0) next = r.steps.findIndex(sid => !prog.done.includes(sid));
+  const stage = $('.rstage', screen);
+  const card = el(stage, 'next-card', '', `<div class="nc box-b"><span class="nc-arrow">${art('arrow')}</span><span class="nc-ic">${stepIcon(r.steps[next])}</span><span class="nc-word">${stepWord(r.steps[next])}</span></div>`);
+  let gone = false;
+  const go2 = () => { if (gone || tk !== S.token) return; gone = true; runStep(next); };
+  card.addEventListener('click', go2);
+  later(go2, 1700);
+}
+
+/* ---------- celebration at the end of a routine ---------- */
+function celebrate(kind) {
+  const c = S.child, L = CONFIG.labels, night = kind === 'night';
+  Hint.stop();
+  Store.data.history.push({ date: todayKey(), child: c.id, mode: kind, day: DAYS[S.ctx.day], t: Date.now() });
+  Store.save();
+  const ov = $('#celebrate');
+  ov.classList.toggle('night', night);
+  $('.cele-fig', ov).style.setProperty('--gh', c.look.height);
+  $('.cele-fig', ov).innerHTML = figure(c, night ? { eyes: 'happy' } : { pose: 'cheer' });
+  $('.cele-badge', ov).innerHTML = art(night ? 'moon' : 'sun');
+  $('.cele-title', ov).textContent = `${night ? L.goodNight : L.hooray}, ${c.name}!`;
+  $('.cele-sub', ov).innerHTML = `<span class="ic">${badge(c)}</span>${night ? L.nightDone : L.morningDone}`;
+  $('#celeAgain').innerHTML = `${art('replay')}${L.play}`;
+  $('#celeDone').innerHTML = `${art('tick')}${L.done}`;
+  ov.hidden = false;
+  Sfx.play(night ? 'lullaby' : 'cheer');
+  Confetti.start(night);
+  $('#celeAgain').onclick = () => { closeCele(); Sfx.play('pop'); rProg(true); Store.save(); go('routine', { routine: kind }); };
+  $('#celeDone').onclick = () => { closeCele(); Sfx.play('pop'); go('home', { child: null }); };
+}
+
+/* =====================================================================
+   STEPS A — wake up, get dressed / pyjamas, do hair, brush teeth
+   ===================================================================== */
+ART.figureHead = { vb: '6 18 108 116', filter: 'mkS', ks: .6, draw: o => drawGirl(o) };      // head and shoulders (mirror)
+ART.figureMouth = { vb: '30 54 60 46', filter: 'mkS', ks: .4, draw: o => drawGirl(o) };     // big close-up for teeth
+
+/* a girl standing in a scene: x = middle, footY = floor, h = height for the tallest girl */
+function girlEl(scene, c, x, footY, h, o = {}, cls = '') {
+  h *= (c.look.height || 1);
+  const w = h * 120 / 210;
+  const d = el(scene, 'e who-fig ' + cls, P16(x - w / 2, footY - h, w, h), figure(c, o));
+  d.draw = (o2 = {}) => { d.innerHTML = figure(c, { ...o, ...o2 }); };
+  return d;
+}
+/* scene units -> screen pixels */
+function scenePt(sc, x, y) { const r = sc.getBoundingClientRect(); return [r.left + x / 1600 * r.width, r.top + y / 1000 * r.height]; }
+const tkGuard = () => { const tk = S.token; return () => tk === S.token; };
+
+STEPS.wakeUp = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, R = ROOM.bedroom, alive = tkGuard();
+  const sc = sceneBox(root, 'bedroom');
+  el(sc, 'e', P16(...R.win), art('windowDay'));
+  el(sc, 'e', P16(...R.lamp), art('lamp', { on: false }));
+  const clock = el(sc, 'e', P16(...R.clock), art('alarm'));
+  const lying = el(sc, 'e lying', P16(...R.lying), figure(c, { eyes: 'closed' }));
+  const blanket = el(sc, 'e', P16(...R.blanket), art('blanket', { color: c.accent }));
+  const curL = el(sc, 'e curtain cl', P16(...R.curL), art('curtain'));
+  const curR = el(sc, 'e curtain cr', P16(...R.curR), art('curtain'));
+  const dark = el(sc, 'dark'); dark.style.opacity = .5;
+  let asleep = true;
+  const snore = () => { if (!alive() || !asleep) return; const [x, y] = scenePt(sc, R.pillow[0] + 40, R.pillow[1] - 60); zzzAt(x, y); later(snore, 1500); };
+  later(snore, 600);
+  flash(clock, 'wiggle'); Sfx.play('alarm');
+
+  setBanner([art('curtain')], L.wakeCurtains);
+  [curL, curR].forEach(cu => cu.classList.add('tap', 'glowy'));
+  S.help = () => Hint.tap(curL);
+  later(S.help, 1200);
+  const openCurtains = () => {
+    if (curL.classList.contains('open')) return;
+    Hint.stop(); [curL, curR].forEach(cu => cu.classList.remove('glowy', 'tap')); curL.classList.add('open'); curR.classList.add('open');
+    dark.style.opacity = 0; Sfx.play('whoosh'); Sfx.play('tweet', .6);
+    const [wx, wy] = scenePt(sc, 700, 230); for (let i = 0; i < 2; i++) fxSpawn(art('bird'), '', wx, wy + i * 30, 46, 30, [{ opacity: 0 }, { opacity: 1, dx: 80, dy: -20 }, { opacity: 0, dx: 260, dy: -60 }], 1800 + i * 300);
+    later(() => {
+      setBanner([art('tapHand')], L.wakeTickle);
+      lying.classList.add('tap', 'glowy'); blanket.classList.add('tap');
+      S.help = () => Hint.tap(lying); later(S.help, 600);
+    }, 900);
+  };
+  curL.addEventListener('click', openCurtains); curR.addEventListener('click', openCurtains);
+  const tickle = async () => {
+    if (!asleep || !curL.classList.contains('open')) return;
+    asleep = false; Hint.stop(); lying.classList.remove('glowy'); Sfx.play('giggle');
+    lying.innerHTML = figure(c, { eyes: 'happy', mouth: 'cheer' }); flash(lying, 'wiggle');
+    await wait(900); if (!alive()) return;
+    lying.innerHTML = figure(c, { mouth: 'yawn' }); Sfx.play('yawn');
+    await wait(1100); if (!alive()) return;
+    lying.remove(); blanket.classList.remove('tap'); Sfx.play('boing');
+    const g = girlEl(sc, c, R.standX + 120, R.floor, 420, { pose: 'cheer', mouth: 'cheer' });
+    g.animate([{ transform: 'translate(40%, -30%) scale(.8)', opacity: 0 }, { offset: .5, transform: 'translate(10%, -20%)', opacity: 1 }, { transform: 'none' }], { duration: 600, easing: 'ease-out' });
+    later(done, 1500);
+  };
+  lying.addEventListener('click', tickle); blanket.addEventListener('click', tickle);
+};
+function zzzAt(x, y) {
+  fxSpawn(art('zzz'), '', x, y, 46, 46, [{ opacity: 0, t: 'scale(.5)' }, { opacity: 1, dx: 14, dy: -30 }, { opacity: 0, dx: 40, dy: -90, t: 'scale(1.3) rotate(10deg)' }], 1400);
+}
+
+STEPS.dress = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, R = ROOM.dress, pj = def.set === 'pyjamas';
+  const set = pj ? CONFIG.pyjamas : CONFIG.outfits, ids = Object.keys(set);
+  const sc = sceneBox(root, 'dressRoom');
+  const girl = girlEl(sc, c, R.girlX, R.floor, R.girlH);
+  if (pj) { const d = el(sc, 'dark'); d.style.opacity = .22; }
+  const rows = ids.length > 4 ? 2 : 1, per = Math.ceil(ids.length / rows), slot = R.rail[2] / per;
+  const w = rows > 1 ? Math.min(slot, 140) : Math.min(slot * 1.08, 190), h = w * 120 / 84;
+  if (rows > 1) el(sc, 'e', P16(R.rail[0], R.rail2 - 10, R.rail[2], 20), `<svg class="art" viewBox="0 0 720 20" preserveAspectRatio="none"><g filter="url(#mk)"><path d="M6 10 H714" stroke="${INK}" stroke-width="16" stroke-linecap="round"/><path d="M6 10 H714" stroke="#c3c8d0" stroke-width="8" stroke-linecap="round"/></g></svg>`);
+  const hangers = ids.map((id, i) => {
+    const r = Math.floor(i / per), k = i % per, inRow = Math.min(per, ids.length - r * per), off = (per - inRow) * slot / 2;
+    const hg = el(sc, 'e hanger tap', P16(R.rail[0] + off + slot * (k + .5) - w / 2, (r ? R.rail2 : R.rail[1]) - 12, w, h), art('outfitHanger', set[id]));
+    hg.dataset.id = id;
+    Drag.attach(hg, {
+      targets: () => [{ el: girl, accept: true, margin: 80, shrink: .5, fade: true, onDrop: () => wearIt(id, hg) }],
+      onTap: () => wearIt(id, hg), onMiss: () => Sfx.play('nudge')
+    });
+    return hg;
+  });
+  function wearIt(id, hg) {
+    hg.classList.remove('lifted');
+    hangers.forEach(x => x.classList.toggle('worn', x === hg));
+    setLook(c, pj ? 'pyjamas' : 'outfit', id);
+    girl.draw({ outfit: outfitDef(id), pose: 'cheer', mouth: 'cheer' });
+    flash(girl, 'bounce'); Sfx.play('sparkle'); Sfx.play('pop');
+    const [x, y] = rectC(girl); sparkleAt(x, y, 8); bubble(girl, set[id].word);
+    later(() => girl.draw({ outfit: outfitDef(id) }), 1000);
+    doneBtn(root, done);
+  }
+  setBanner([art(pj ? 'pjIcon' : 'hanger')], pj ? L.pjs : L.dress);
+  S.help = () => Hint.drag(hangers[0], girl);
+  later(S.help, 900);
+};
+
+STEPS.hair = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, alive = tkGuard();
+  const sc = sceneBox(root, 'bathroom');
+  el(sc, 'e', P16(140, 30, 700, 817), art('mirror'));
+  const base = { look: c.look, ...wearNow(c) };
+  const head = el(sc, 'e bighead', P16(200, 140, 580, 623), art('figureHead', { ...base, hair: 'messy', mouth: 'o' }));
+  const styles = (c.hairStyles || Object.keys(CONFIG.hairStyles)).slice(0, 3);
+  const row = choiceRow(sc, styles.map(s => ({ id: s, word: CONFIG.hairStyles[s] || s, html: art('figureHead', { ...base, hair: s }) })), pick, 'side');
+  let busy = false;
+  async function pick(style) {
+    if (busy) return; busy = true; Hint.stop();
+    const brush = el(sc, 'e brushing', P16(560, 120, 240, 240), art('hairbrush'));
+    Sfx.play('brush'); Sfx.play('brush', .45); Sfx.play('brush', .9);
+    await finished(brush.animate([
+      { transform: 'translate(0,0) rotate(0)' }, { transform: 'translate(-90%, 60%) rotate(-30deg)' }, { transform: 'translate(0, 10%) rotate(0)' },
+      { transform: 'translate(-100%, 80%) rotate(-30deg)' }, { transform: 'translate(-10%, 30%) rotate(0)' }, { transform: 'translate(-110%, 100%) rotate(-30deg)', opacity: 1 },
+      { transform: 'translate(-60%, 140%) rotate(-10deg)', opacity: 0 }], { duration: 1300, easing: 'ease-in-out' }));
+    brush.remove(); if (!alive()) return;
+    setLook(c, 'hair', style);
+    head.innerHTML = art('figureHead', { ...base, hair: style, mouth: 'cheer', eyes: 'happy' });
+    const [x, y] = rectC(head); sparkleAt(x, y - 60, 8); Sfx.play('sparkle');
+    later(() => { head.innerHTML = art('figureHead', { ...base, hair: style }); }, 1200);
+    busy = false; doneBtn(root, done);
+  }
+  setBanner([art('hairbrush')], L.hairPick);
+  S.help = () => Hint.tap($('.choice', row));
+  later(S.help, 900);
+};
+
+STEPS.teeth = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, alive = tkGuard();
+  const sc = sceneBox(root, 'bathroom');
+  const base = { look: c.look, ...wearNow(c) };
+  const face = el(sc, 'e', P16(160, 90, 1000, 767), art('figureMouth', { ...base, mouth: 'teeth' }));
+  const spots = [[520, 476], [660, 466], [800, 476], [550, 650], [660, 660], [770, 650]].map(([x, y], i) =>
+    ({ el: el(sc, 'germ', P16(x - 42, y - 42, 84, 84), art('germ', { color: ['#8cc47e', '#a98bd8', '#f0a65a'][i % 3] })) }));
+  spots.forEach((s, i) => s.el.animate([{ transform: 'rotate(-8deg)' }, { transform: 'rotate(8deg) translateY(-6%)' }], { duration: 500 + i * 60, direction: 'alternate', iterations: Infinity }));
+  el(sc, 'e', P16(1300, 760, 150, 130), `<svg class="art" viewBox="0 0 100 90"><g filter="url(#mk)"><path d="M18 10 H82 L74 86 H26 Z" fill="#9fd3f0" ${K(5)}/><path d="M24 36 H76" stroke="#fff" stroke-width="6"/></g></svg>`);
+  const tool = el(sc, 'tool', P16(1200, 420, 300, 300), art('toothbrush'));
+  scrubber(tool, spots, {
+    need: 240, headX: .78, headY: .3,
+    onStart: () => Sfx.play('pick'),
+    onScrub: (x, y) => { foam(x, y, 1); Sfx.play('scrub'); },
+    onClean: sp => { sp.el.getAnimations().forEach(an => an.cancel()); sp.el.classList.add('pop'); Sfx.play('squish'); const [x, y] = rectC(sp.el); sparkleAt(x, y, 4); },
+    onAll: async () => {
+      tool.style.pointerEvents = 'none';
+      await wait(400); if (!alive()) return;
+      face.innerHTML = art('figureMouth', { ...base, mouth: 'cheer', eyes: 'happy' });
+      setBanner([art('sparkleStar')], L.sparkly); Sfx.play('ting'); const [x, y] = rectC(face); sparkleAt(x, y + 40, 10);
+      later(done, 1600);
+    }
+  });
+  setBanner([art('toothbrush')], L.teeth);
+  S.help = () => Hint.drag(tool, spots.find(s => !s.gone)?.el || face);
+  later(S.help, 900);
+};
+
+/* =====================================================================
+   STEPS B — play, bubble game, breakfast / dinner, bath
+   ===================================================================== */
+Object.assign(ART, {
+  couchIcon: { vb: '0 0 100 100', draw: () => `<path d="M14 64 V40 Q14 28 26 28 H74 Q86 28 86 40 V64 Z" fill="#6fc2b8" ${K()}/><rect x="10" y="58" width="80" height="20" rx="6" fill="#7cd0c5" ${K()}/>
+    <rect x="4" y="46" width="16" height="36" rx="7" fill="#6fc2b8" ${K(4)}/><rect x="80" y="46" width="16" height="36" rx="7" fill="#6fc2b8" ${K(4)}/><path d="M16 82 V90 M84 82 V90" ${K(6)}/>
+    <path d="M30 22 Q36 8 44 18 M60 18 Q68 6 74 20" fill="none" ${K(3.5)}/>` },
+  barIcon: { vb: '0 0 100 100', draw: () => `<rect x="6" y="14" width="88" height="10" rx="5" fill="#c3c8d0" ${K(4)}/>
+    <path d="M40 22 L46 46 M60 22 L54 46" ${K(4)}/><circle cx="50" cy="40" r="9" fill="${SKIN}" ${K(3.5)}/><path d="M44 48 L56 48 L62 74 L38 74 Z" fill="#f29bb8" ${K(4)}/><path d="M45 74 L42 92 M55 74 L58 92" ${K(4)}/>` },
+  danceIcon: { vb: '0 0 100 100', draw: () => `<path d="M50 4 V18" ${K(3)}/><circle cx="50" cy="34" r="17" fill="#c3c8d0" ${K()}/><path d="M36 28 H64 M34 38 H66 M44 18 V50 M56 18 V50" stroke="#fff" stroke-width="3"/>
+    <g transform="translate(10 50) scale(.9)">${ART.note.draw()}</g><g transform="translate(60 56) scale(.8)">${ART.note.draw()}</g>` }
+});
+const PLAY_ICON = { couch: 'couchIcon', bar: 'barIcon', dance: 'danceIcon' };
+
+STEPS.play = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, R = ROOM.living, alive = tkGuard();
+  const sc = sceneBox(root, 'living');
+  const list = (def.choices || ['couch', 'bar']).filter(k => CONFIG.plays[k]);
+  let girl = girlEl(sc, c, 600, R.floor, 400);
+  let taps = 0, kind = null, lights = null;
+  const row = choiceRow(sc, list.map(k => ({ id: k, word: CONFIG.plays[k], html: art(PLAY_ICON[k] || 'playIcon') })), pick);
+  setBanner([art('playIcon')], L.playPick);
+  S.help = () => Hint.tap($('.choice', row)); later(S.help, 900);
+
+  function pick(k) {
+    kind = k; row.remove(); girl.remove(); lights?.remove(); lights = null;
+    const h = 400 * (c.look.height || 1);
+    if (k === 'couch') { girl = girlEl(sc, c, R.seatX, R.seatY, 400, { pose: 'sit', mouth: 'cheer' }, 'tap jumpy'); Sfx.play('boing'); }
+    else if (k === 'bar') { girl = girlEl(sc, c, R.barX, R.barY - h * 14 / 210 + h, 400, { pose: 'hang', mouth: 'cheer' }, 'tap swing'); Sfx.play('whoosh'); }
+    else {
+      lights = el(sc, 'disco', '', [0, 1, 2, 3, 4].map(i => `<span style="left:${10 + i * 19}%;top:${8 + (i % 2) * 14}%;background:${['#e5675c', '#f4d36b', '#8cc47e', '#7aa9de', '#a98bd8'][i]};animation-delay:${i * .2}s"></span>`).join(''));
+      girl = girlEl(sc, c, R.danceX, R.floor, 420, { pose: 'cheer', mouth: 'cheer' }, 'tap dance'); Sfx.play('tune');
+    }
+    setBanner([art('tapHand'), art(PLAY_ICON[k])], L.playTap);
+    S.help = () => Hint.tap(girl); later(S.help, 1200);
+    girl.addEventListener('click', fun);
+    later(() => alive() && doneBtn(root, done), 5000);
+  }
+  function fun() {
+    Hint.stop(); taps++;
+    const [x, y, r] = rectC(girl);
+    if (kind === 'couch') {
+      Sfx.play('boing'); Sfx.play('giggle', .1);
+      fxSpawn(art('cushion', { color: ['#f4d36b', '#f29bb8', '#a98bd8'][taps % 3] }), '', x + rand(-60, 60), r.bottom - 40, 70, 70,
+        [{ t: 'rotate(0)' }, { dx: rand(-200, 200), dy: -260, t: 'rotate(200deg)' }, { opacity: 0, dx: rand(-260, 260), dy: 40, t: 'rotate(400deg)' }], 1100);
+    } else if (kind === 'bar') {
+      Sfx.play('whoosh'); Sfx.play('giggle', .3);
+      girl.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-360deg)' }], { duration: 800, easing: 'ease-in-out', composite: 'replace' });
+      sparkleAt(x, y, 6);
+    } else {
+      Sfx.play('tune'); notesFrom(girl);
+      girl.draw({ pose: ['wave', 'stand', 'cheer'][taps % 3], mouth: 'cheer', eyes: taps % 2 ? 'happy' : 'open' });
+    }
+    if (taps >= 2) doneBtn(root, done);
+  }
+};
+
+STEPS.bubbles = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, alive = tkGuard(), n = def.count || 10;
+  const sc = sceneBox(root, 'garden');
+  const girl = girlEl(sc, c, 250, 940, 430, { pose: 'cheer', mouth: 'cheer' });
+  const dots = el(sc, 'popcount', '', Array.from({ length: n }, () => '<span></span>').join(''));
+  let popped = 0, finishedGame = false;
+  const spawn = () => {
+    if (!alive() || finishedGame) return;
+    const size = rand(9, 13), x = rand(26, 88);
+    const b = el(sc, 'gbub', `left:${x}%;top:100%;width:${size}%;`);
+    const H = sc.clientHeight, dur = rand(5200, 8000);
+    const a = b.animate([{ transform: 'translate(0, 0)' }, { transform: `translate(${rand(-60, 60)}px, ${-H * .55}px)` }, { transform: `translate(${rand(-60, 60)}px, ${-H * 1.25}px)` }], { duration: dur, easing: 'linear', fill: 'forwards' });
+    a.onfinish = () => b.remove();
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault(); if (b.classList.contains('popped')) return;
+      b.classList.add('popped'); a.pause(); Hint.stop();
+      Sfx.play('bubblePop'); Sfx.play('pop', .02);
+      const [x2, y2] = rectC(b); sparkleAt(x2, y2, 5);
+      b.animate([{ transform: getComputedStyle(b).transform, opacity: 1 }, { transform: getComputedStyle(b).transform + ' scale(1.5)', opacity: 0 }], { duration: 220, fill: 'forwards' }).onfinish = () => b.remove();
+      popped++; const d = dots.children[popped - 1]; if (d) { d.classList.add('on'); flash(d, 'pop'); }
+      if (popped >= n && !finishedGame) {
+        finishedGame = true; Sfx.play('cheer'); girl.draw({ pose: 'cheer', mouth: 'cheer', eyes: 'happy' }); flash(girl, 'bounce');
+        later(done, 1600);
+      }
+    });
+    later(spawn, rand(550, 900));
+  };
+  [0, 250, 500].forEach(t => later(spawn, t));
+  setBanner([art('bubbleWand')], L.bubbles);
+  S.help = () => { const b = $$('.gbub:not(.popped)', sc).find(x => { const r = x.getBoundingClientRect(); return r.top > 120; }); b && Hint.tap(b); };
+  later(S.help, 1800);
+};
+
+STEPS.eat = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, R = ROOM.kitchen, alive = tkGuard(), night = S.routine === 'night';
+  const sc = sceneBox(root, 'kitchen');
+  el(sc, 'e', P16(...R.win), art(night ? 'windowNight' : 'windowDay'));
+  const gh = R.girlH * (c.look.height || 1), gw = gh * 120 / 210, top = R.girlTop + .62 * (R.girlH - gh);
+  const girl = el(sc, 'e who-fig', P16(R.girlX - gw / 2, top, gw, gh), figure(c, { pose: 'sit' }));
+  const mouthY = top + gh * 80 / 210;
+  el(sc, 'e', P16(...R.table), art('tableFront'));
+  const menu = (def.menu || []).filter(id => CONFIG.foods[id]);
+  const row = choiceRow(sc, menu.map(id => ({ id, word: CONFIG.foods[id].word, html: art(CONFIG.foods[id].art) })), pick);
+  setBanner([art(CONFIG.foods[menu[0]]?.art || 'cereal')], L.eatPick);
+  S.help = () => Hint.tap($('.choice', row)); later(S.help, 900);
+  let plateEl = null, busy = false, eaten = 0;
+  function pick(id) {
+    row.remove();
+    plateEl = el(sc, 'e plate tap', P16(...R.plate), art(CONFIG.foods[id].art));
+    plateEl.animate([{ transform: 'translateY(-80%) scale(.6)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 450, easing: 'ease-out' });
+    Sfx.play('drop');
+    setBanner([art('tapHand'), art(CONFIG.foods[id].art)], L.eatTap);
+    S.help = () => Hint.tap(plateEl); later(S.help, 800);
+    plateEl.addEventListener('click', bite);
+  }
+  async function bite() {
+    if (busy) return;
+    const left = $$('.bite', plateEl).filter(b => b.style.display !== 'none'); if (!left.length) return;
+    busy = true; Hint.stop();
+    const spoon = el(sc, 'e spoonfly', P16(R.girlX - 30, 560, 60, 150), art('spoon'));
+    const H = sc.clientHeight, up = (560 - mouthY + 10) / 1000 * H;
+    await finished(spoon.animate([{ transform: 'translate(0, 0) rotate(20deg)' }, { transform: `translate(0, ${-up}px) rotate(0deg)` }], { duration: 380, easing: 'ease-in-out', fill: 'forwards' }));
+    if (!alive()) return;
+    left[left.length - 1].style.display = 'none'; eaten++;
+    girl.innerHTML = figure(c, { pose: 'sit', mouth: 'chew' }); Sfx.play('chomp');
+    spoon.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250, fill: 'forwards' }).onfinish = () => spoon.remove();
+    await wait(500); if (!alive()) return;
+    girl.innerHTML = figure(c, { pose: 'sit' }); busy = false;
+    if (left.length === 1) {
+      girl.innerHTML = figure(c, { pose: 'cheer', mouth: 'cheer', eyes: 'happy' }); Sfx.play('yum');
+      setBanner([art('heartIcon')], L.yum);
+      const [x, y] = rectC(girl); for (let i = 0; i < 5; i++) fxSpawn(art('heartIcon'), '', x + rand(-80, 80), y - 40, 40, 40, [{ opacity: 0 }, { opacity: 1, dy: -40 }, { opacity: 0, dy: -130 }], 1200 + i * 120);
+      later(done, 1500);
+    }
+  }
+};
+
+STEPS.bath = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, R = ROOM.bath, alive = tkGuard();
+  const sc = sceneBox(root, 'bathroom');
+  const gh = R.girlH * (c.look.height || 1), gw = gh * 120 / 210, top = 530 - gh * 100 / 210, left = R.girlX - gw / 2;
+  el(sc, 'e', P16(...R.tubBack), art('tubBack'));
+  const girl = el(sc, 'e who-fig', P16(left, top, gw, gh), figure(c, { outfit: { type: 'bare' }, pose: 'cheer', mouth: 'smile' }));
+  el(sc, 'e', P16(...R.tub), art('tubFront'));
+  const duck = el(sc, 'e duck tap', P16(...R.duck), art('duck'));
+  duck.addEventListener('click', () => { Sfx.play('duck'); flash(duck, 'fun-squash'); });
+  const at = (fx, fy) => [left + fx / 120 * gw, top + fy / 210 * gh];
+  const spots = [[43, 76], [77, 76], [27, 72], [93, 72]].map(([fx, fy]) => { const [x, y] = at(fx, fy), s = 56; return { el: el(sc, 'germ mud', P16(x - s / 2, y - s / 2, s, s), art('mud')) }; });
+  const sponge = el(sc, 'tool', P16(...R.sponge), art('sponge'));
+  scrubber(sponge, spots, {
+    need: 220, headX: .5, headY: .5,
+    onStart: () => Sfx.play('pick'),
+    onScrub: (x, y) => { foam(x, y, 2); Sfx.play('scrub'); },
+    onClean: sp => { sp.el.classList.add('pop'); Sfx.play('squish'); },
+    onAll: async () => {
+      sponge.style.pointerEvents = 'none';
+      girl.innerHTML = figure(c, { outfit: { type: 'bare' }, pose: 'cheer', mouth: 'cheer', eyes: 'happy' });
+      Sfx.play('splash'); const [x, y] = rectC(girl); for (let i = 0; i < 12; i++) foam(x + rand(-150, 150), y + rand(0, 80), 1);
+      setBanner([art('sparkleStar')], L.sparkly);
+      later(done, 1700);
+    }
+  });
+  setBanner([art('sponge')], L.bath);
+  S.help = () => Hint.drag(sponge, spots.find(s => !s.gone)?.el || girl);
+  later(S.help, 900);
+};
+
+/* =====================================================================
+   STEPS C — watch a show, read a book, go to bed, drive to school
+   ===================================================================== */
+const SHOW_ART = { bunny: 'showBunny', dino: 'showDino', fish: 'showFish' };
+function showHTML(k) {
+  const a = art(SHOW_ART[k] || 'showBunny');
+  if (k === 'dino') return `<div class="tvbg tv-dino"><div class="tvc dino">${a}</div><div class="tvn n1">${art('note')}</div><div class="tvn n2">${art('note')}</div></div>`;
+  if (k === 'fish') return `<div class="tvbg tv-fish"><div class="tvc f1">${a}</div><div class="tvc f2">${a}</div><div class="tvc f3">${a}</div><i class="tb b1"></i><i class="tb b2"></i><i class="tb b3"></i></div>`;
+  return `<div class="tvbg tv-bunny"><i class="st s1"></i><i class="st s2"></i><i class="st s3"></i><i class="st s4"></i><div class="tvc rocket">${a}</div></div>`;
+}
+
+STEPS.shows = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, R = ROOM.living, alive = tkGuard();
+  const sc = sceneBox(root, 'living');
+  const dim = el(sc, 'dark'); dim.style.opacity = .14;
+  const tv = el(sc, 'e tvscreen', P16(...R.tv), '');
+  const girl = girlEl(sc, c, R.seatX, R.seatY, 400, { pose: 'sit', lookX: -2 });
+  let current = null, shown = false;
+  const row = choiceRow(sc, Object.entries(CONFIG.shows).map(([k, w]) => ({ id: k, word: w, html: art(SHOW_ART[k] || 'tv') })), pick, 'small');
+  setBanner([art('tv')], L.showPick);
+  S.help = () => Hint.tap($('.choice', row)); later(S.help, 900);
+  function pick(k) {
+    current = k; Hint.stop();
+    tv.innerHTML = showHTML(k); flash(tv, 'tvon'); Sfx.play('click'); Sfx.play('tvtune', .15, k);
+    girl.draw({ mouth: 'cheer', eyes: 'happy' }); later(() => girl.draw({ lookX: -2 }), 1200);
+    const loop = () => { if (alive() && current === k) { Sfx.play('tvtune', 0, k); later(loop, 3200); } };
+    later(loop, 3200);
+    if (!shown) { shown = true; later(() => alive() && doneBtn(root, () => { current = null; Sfx.play('click'); tv.innerHTML = ''; done(); }), 3500); }
+  }
+};
+
+STEPS.books = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, R = ROOM.bedroom, alive = tkGuard();
+  const sc = sceneBox(root, 'bedroom');
+  el(sc, 'e', P16(...R.win), art('windowNight'));
+  el(sc, 'e', P16(...R.lamp), art('lamp', { on: true }));
+  const girl = girlEl(sc, c, 1250, 770, 380, { pose: 'sit' });
+  const dim = el(sc, 'dark'); dim.style.opacity = .16;
+  const list = Object.entries(CONFIG.books);
+  const row = choiceRow(sc, list.map(([k, b]) => ({ id: k, word: b.word, html: `<span class="bcover" style="background:${b.color}">${art(b.cover)}</span>` })), pick);
+  setBanner([art('bookIcon')], L.bookPick);
+  S.help = () => Hint.tap($('.choice', row)); later(S.help, 900);
+  function pick(k) {
+    row.remove(); Hint.stop(); Sfx.play('page');
+    const b = CONFIG.books[k], pages = b.pages.slice();
+    const book = el(sc, 'book', `--bc:${b.color}`, `<div class="page pl"></div><div class="page pr"></div>`);
+    const pl = $('.pl', book), pr = $('.pr', book);
+    let i = -1;
+    const fillPages = () => {
+      if (i < 0) { pl.innerHTML = `<div class="pcover">${art(b.cover)}</div>`; pr.innerHTML = `<div class="ptitle">${b.word}</div>`; }
+      else if (i < pages.length) { pl.innerHTML = `<div class="ppic">${art(pages[i][0])}</div>`; pr.innerHTML = `<div class="pword">${pages[i][1]}</div><div class="psmall">${art(pages[i][0])}</div>`; }
+      else { pl.innerHTML = `<div class="ppic">${figure(c, { pose: 'cheer', mouth: 'cheer' })}</div>`; pr.innerHTML = `<div class="pword">${L.theEnd}</div><div class="psmall">${art('heartIcon')}</div>`; }
+    };
+    fillPages();
+    book.animate([{ transform: 'scale(.3) rotate(-8deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 450, easing: 'ease-out' });
+    setBanner([art('tapHand'), art('bookIcon')], L.bookTap);
+    S.help = () => Hint.tap(pr); later(S.help, 1200);
+    let busy = false, queued = false;
+    book.addEventListener('click', async () => {
+      if (busy) { queued = true; return; } busy = true; Hint.stop();
+      if (i >= pages.length) { Sfx.play('page'); await finished(book.animate([{ transform: 'none', opacity: 1 }, { transform: 'scale(.4) translateY(40%)', opacity: 0 }], { duration: 400, fill: 'forwards' })); if (alive()) done(); return; }
+      Sfx.play('page');
+      await finished(pr.animate([{ transform: 'rotateY(0)' }, { transform: 'rotateY(-90deg)' }], { duration: 190, easing: 'ease-in', fill: 'forwards' }));
+      if (!alive()) return;
+      i++; fillPages();
+      pr.getAnimations().forEach(a => a.cancel());
+      await finished(pl.animate([{ transform: 'rotateY(90deg)' }, { transform: 'rotateY(0)' }], { duration: 190, easing: 'ease-out' }));
+      busy = false;
+      if (queued) { queued = false; later(() => book.click(), 30); }
+      if (i >= pages.length) { girl.draw({ pose: 'sit', mouth: 'cheer', eyes: 'happy' }); Sfx.play('ting'); }
+    });
+  }
+};
+
+STEPS.bed = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, R = ROOM.bedroom, alive = tkGuard();
+  const sc = sceneBox(root, 'bedroom');
+  const lamp = el(sc, 'e', P16(...R.lamp), art('lamp', { on: true }));
+  el(sc, 'e', P16(...R.clock), art('alarm'));
+  const blanket = el(sc, 'e tap', P16(...R.blanket), art('blanket', { color: c.accent }));
+  const girl = girlEl(sc, c, R.standX, R.floor, 420, {}, 'tap');
+  const dark = el(sc, 'dark'); dark.style.opacity = .22;
+  el(sc, 'e', P16(...R.win), art('windowNight'));
+  const stars = el(sc, 'e glowstars', P16(0, 0, 1600, 420), art('glowStars'));
+  let lying = null, step = 1;
+  setBanner([art('bedIcon')], L.intoBed);
+  [girl, blanket].forEach(x => x.classList.add('glowy'));
+  S.help = () => Hint.tap(blanket); later(S.help, 900);
+  const hop = async () => {
+    if (step !== 1) return; step = 2; Hint.stop(); girl.classList.remove('glowy'); blanket.classList.remove('glowy');
+    Sfx.play('boing');
+    const [gx, gy] = rectC(girl), [bx, by] = rectC(blanket);
+    await finished(girl.animate([{ transform: 'none' }, { offset: .5, transform: `translate(${(bx - gx) * .5}px, ${(by - gy) * .5 - 200}px) rotate(-40deg)` }, { transform: `translate(${bx - gx - 60}px, ${by - gy}px) rotate(-90deg) scale(.6)`, opacity: 0 }], { duration: 750, easing: 'ease-in-out', fill: 'forwards' }));
+    if (!alive()) return;
+    girl.remove();
+    lying = el(sc, 'e lying', P16(...R.lying), figure(c, { mouth: 'smile' }));
+    sc.insertBefore(lying, blanket); Sfx.play('thud');
+    setBanner([art('lamp', { on: true })], L.lightOff);
+    lamp.classList.add('tap', 'glowy');
+    S.help = () => Hint.tap(lamp); later(S.help, 800);
+  };
+  girl.addEventListener('click', hop); blanket.addEventListener('click', hop);
+  lamp.addEventListener('click', async () => {
+    if (step !== 2) return; step = 3; Hint.stop(); lamp.classList.remove('glowy');
+    Sfx.play('click'); lamp.innerHTML = art('lamp', { on: false });
+    dark.style.opacity = .68; stars.classList.add('on');
+    lying.innerHTML = figure(c, { eyes: 'closed' });
+    setBanner([art('moon')], L.goodNight);
+    const [x, y] = scenePt(sc, R.pillow[0] + 40, R.pillow[1] - 60);
+    [600, 1700, 2800].forEach(t => later(() => zzzAt(x, y), t));
+    later(done, 3300);
+  });
+};
+
+STEPS.goOut = (root, def, done) => {
+  const c = S.child, L = CONFIG.labels, alive = tkGuard(), h = c.look.height || 1;
+  const fh = 200 * h, top = 300 - 61 * h, left = 238 - 57 * h;
+  root.innerHTML = `<section class="play" style="height:100%"><div class="outside box-b enter" style="border:var(--line);border-radius:var(--wob)"><div class="stage">
+    <div class="hills" style="transform:translateX(-25%)">${art('hills')}</div>
+    <div class="strip-scene" style="transform:translateX(-50%)">${art('scene')}
+      <span class="place-label" style="left:31%;top:44%">${c.fromWord}</span>
+      <div class="homehouse">${art('homeHouse')}</div>
+      <div class="school-door" style="left:29.4%;top:62%;width:3.2%;height:18%"></div>
+    </div>
+    <div class="car-wrap going">
+      <div class="car-girl" style="left:${(left - 40) / 4}%;top:${(top - 224) / 2.38}%;height:${fh / 2.38}%">${figure(c)}</div>
+      <div class="car">${art('car')}</div>
+    </div>
+    <div class="girl-out hidden" style="left:47%;height:${40 * h}%">${figure(c, { wear: c.backpack })}</div>
+  </div></div></section>`;
+  const strip = $('.strip-scene', root), hills = $('.hills', root), car = $('.car-wrap', root), carGirl = $('.car-girl', root), out = $('.girl-out', root), door = $('.school-door', root);
+  setBanner([art('car'), 'ARROW', art('school')], L.goDrive);
+  car.classList.add('tapme');
+  S.help = () => Hint.tap(car); later(S.help, 900);
+  car.addEventListener('click', async function drive() {
+    car.removeEventListener('click', drive); Hint.stop(); car.classList.remove('tapme'); car.classList.add('driving'); S.help = () => {};
+    const dur = reduceMotion ? 1200 : 4200, ease = 'cubic-bezier(.45,0,.3,1)';
+    Sfx.play('engine', 0, dur / 1000);
+    hills.animate([{ transform: 'translateX(-25%)' }, { transform: 'translateX(0)' }], { duration: dur, easing: ease, fill: 'forwards' });
+    await finished(strip.animate([{ transform: 'translateX(-50%)' }, { transform: 'translateX(0)' }], { duration: dur, easing: ease, fill: 'forwards' }));
+    if (!alive()) return;
+    car.classList.remove('driving'); Sfx.play('horn');
+    await wait(500); if (!alive()) return;
+    carGirl.style.opacity = 0; out.classList.remove('hidden'); Sfx.play('pop');
+    out.animate([{ transform: 'translate(-60%, -30%) scale(.7)', opacity: 0 }, { offset: .5, transform: 'translate(-20%, -25%)', opacity: 1 }, { transform: 'none' }], { duration: 520, easing: 'ease-out' });
+    setBanner([art('tapHand'), art('school')], place(L.goIn));
+    door.classList.add('tap', 'glowy');
+    S.help = () => Hint.tap(door); later(S.help, 900);
+    const walkIn = async () => {
+      door.removeEventListener('click', walkIn); out.removeEventListener('click', walkIn); Hint.stop(); door.classList.remove('glowy');
+      const [ox] = rectC(out), [dx] = rectC(door), walk = dx - ox;
+      out.classList.add('walking'); for (let i = 0; i < 5; i++) Sfx.play('step', i * .32);
+      await finished(out.animate([{ transform: 'none' }, { transform: `translateX(${walk}px)` }], { duration: 1400, easing: 'linear', fill: 'forwards' }));
+      if (!alive()) return;
+      out.innerHTML = figure(c, { wear: c.backpack, pose: 'wave', mouth: 'cheer' }); out.classList.remove('walking');
+      Sfx.play('bell');
+      await wait(900); if (!alive()) return;
+      await finished(out.animate([{ transform: `translateX(${walk}px)`, opacity: 1 }, { transform: `translateX(${walk}px) scale(.85)`, opacity: 0 }], { duration: 500, fill: 'forwards' }));
+      if (alive()) done();
+    };
+    door.addEventListener('click', walkIn); out.addEventListener('click', walkIn);
+  });
+};
+
+/* =====================================================================
+   MORE ART — step icons, tools, food (four bites each), TV shows
+   ===================================================================== */
+const plate = `<ellipse cx="80" cy="76" rx="74" ry="12" fill="#fff" ${K(4.5)}/><ellipse cx="80" cy="74" rx="52" ry="7" fill="none" stroke="#c9d6e6" stroke-width="3"/>`;
+const bowlFront = col => `<path d="M12 44 Q80 52 148 44 Q144 86 80 88 Q16 86 12 44 Z" fill="${col}" ${K(4.5)}/><path d="M30 64 Q80 72 130 64" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>`;
+const B = s => `<g class="bite">${s}</g>`;
+Object.assign(ART, {
+  /* ---------- step icons ---------- */
+  alarm: { vb: '0 0 100 100', draw: () => `<path d="M22 88 L30 78 M78 88 L70 78" ${K(6)}/>
+    <circle cx="26" cy="22" r="13" fill="#f4d36b" ${K()}/><circle cx="74" cy="22" r="13" fill="#f4d36b" ${K()}/>
+    <circle cx="50" cy="56" r="34" fill="#e5675c" ${K()}/><circle cx="50" cy="56" r="25" fill="#fff" ${K(4)}/>
+    <path d="M50 56 V38 M50 56 L62 62" ${K(5)}/><circle cx="50" cy="56" r="3" fill="${INK}"/><path d="M50 34 v4 M72 56 h-4 M50 78 v-4 M28 56 h4" ${K(3)}/>` },
+  hanger: { vb: '0 0 100 100', draw: () => `<path d="M50 22 Q50 10 58 10 Q66 10 64 18 Q62 24 50 28 L12 46 H88 L50 28" fill="none" ${K(5)}/>
+    <path d="M36 46 L64 46 L80 94 L20 94 Z" fill="#f29bb8" ${K()}/><circle cx="40" cy="70" r="3" fill="#fff"/><circle cx="58" cy="64" r="3" fill="#fff"/><circle cx="52" cy="82" r="3" fill="#fff"/>` },
+  playIcon: { vb: '0 0 100 100', draw: () => `<circle cx="50" cy="52" r="38" fill="#fff" ${K()}/>
+    <path d="M50 14 Q30 52 50 90" fill="none" stroke="#e5675c" stroke-width="12"/><path d="M50 14 Q70 52 50 90" fill="none" stroke="#7aa9de" stroke-width="12"/><path d="M14 44 Q50 60 86 44" fill="none" stroke="#f4d36b" stroke-width="10"/>
+    <circle cx="50" cy="52" r="38" fill="none" ${K()}/>` },
+  toothbrush: { vb: '0 0 100 100', draw: () => `<g transform="rotate(-35 50 50)"><rect x="8" y="46" width="70" height="12" rx="6" fill="#7aa9de" ${K(4.5)}/>
+    <rect x="64" y="30" width="26" height="16" rx="3" fill="#fff" ${K(4)}/><path d="M68 30 V46 M74 30 V46 M80 30 V46 M86 30 V46" stroke="#c9d6e6" stroke-width="2"/>
+    <path d="M64 30 Q70 16 80 22 Q90 14 92 28 Z" fill="#9fd3f0" ${K(3.5)}/></g>` },
+  hairbrush: { vb: '0 0 100 100', draw: () => `<g transform="rotate(-30 50 50)"><rect x="40" y="52" width="16" height="44" rx="7" fill="#a98bd8" ${K()}/>
+    <ellipse cx="48" cy="30" rx="26" ry="28" fill="#f29bb8" ${K()}/><ellipse cx="48" cy="30" rx="18" ry="20" fill="#fbd0dc" ${K(3)}/>
+    ${[[40, 22], [48, 18], [56, 22], [40, 34], [48, 30], [56, 34], [44, 42], [52, 42]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="${INK}"/>`).join('')}</g>` },
+  school: { vb: '0 0 100 100', draw: () => `<path d="M64 24 V6 L82 12 L64 18" fill="#e5675c" ${K(3.5)}/>
+    <path d="M4 44 L50 18 L96 44 Z" fill="#7aa9de" ${K()}/><rect x="12" y="42" width="76" height="52" fill="#f4d9a8" ${K()}/>
+    <circle cx="50" cy="34" r="7" fill="#fff" ${K(3)}/><rect x="40" y="64" width="20" height="30" fill="#e5675c" ${K(4)}/>
+    <rect x="18" y="54" width="14" height="12" fill="#dff0fb" ${K(3)}/><rect x="68" y="54" width="14" height="12" fill="#dff0fb" ${K(3)}/>` },
+  bathIcon: { vb: '0 0 100 100', draw: () => `<path d="M14 50 V22 Q14 10 26 10 Q36 10 36 20" fill="none" ${K(5)}/><path d="M30 20 h12" ${K(5)}/>
+    ${[[30, 44, 10], [46, 38, 12], [64, 40, 11], [78, 46, 9]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#e2f3ff" ${K(3)}/>`).join('')}
+    <path d="M6 50 H94 V62 Q94 84 70 84 H30 Q6 84 6 62 Z" fill="#fff" ${K()}/><path d="M22 84 L18 94 M78 84 L82 94" ${K(5)}/>` },
+  pjIcon: { vb: '0 0 100 100', draw: () => `<path d="M34 14 L66 14 L92 34 L82 48 L72 42 V90 H28 V42 L18 48 L8 34 Z" fill="#4d6a9c" ${K()}/>
+    <path d="M40 14 Q50 26 60 14" fill="none" ${K(4)}/>${[[40, 54], [60, 46], [52, 72], [36, 80], [66, 78]].map(([x, y]) => `<path d="${starPath(x, y, 5, 2.2)}" fill="#f4d36b"/>`).join('')}` },
+  tv: { vb: '0 0 100 100', draw: () => `<path d="M38 22 L26 6 M62 22 L74 6" ${K(4)}/><rect x="6" y="22" width="88" height="62" rx="8" fill="#5a524e" ${K()}/>
+    <rect x="14" y="30" width="72" height="46" rx="4" fill="#9fd3f0" ${K(3.5)}/><path d="${starPath(50, 53, 13, 6)}" fill="#f4d36b" ${K(3)}/><path d="M34 84 L30 94 M66 84 L70 94" ${K(5)}/>` },
+  bookIcon: { vb: '0 0 100 100', draw: () => `<path d="M50 28 Q30 16 8 22 V82 Q30 76 50 88 Q70 76 92 82 V22 Q70 16 50 28 Z" fill="#fff" ${K()}/>
+    <path d="M50 28 V88" ${K(4)}/><path d="M16 36 Q30 32 42 38 M16 48 Q30 44 42 50 M58 38 Q70 32 84 36 M58 50 Q70 44 84 48" fill="none" stroke="#c9b9a6" stroke-width="3" stroke-linecap="round"/>
+    <path d="${starPath(70, 66, 9, 4)}" fill="#f4d36b" ${K(2.5)}/>` },
+  bedIcon: { vb: '0 0 100 100', draw: () => `<path d="M64 10 A14 14 0 1 0 82 28 A11 11 0 0 1 64 10 Z" fill="#f4d36b" ${K(3.5)}/>
+    <path d="M8 34 V90 M92 58 V90" ${K(7)}/><rect x="14" y="48" width="26" height="14" rx="6" fill="#fff" ${K(4)}/>
+    <path d="M8 62 H92 V76 H8 Z" fill="#a98bd8" ${K()}/><path d="M38 58 H92 V66 H38 Z" fill="#c9a3ea" ${K(4)}/>` },
+  sparkleStar: { vb: '0 0 40 40', draw: () => `<path d="M20 2 Q22 18 38 20 Q22 22 20 38 Q18 22 2 20 Q18 18 20 2 Z" fill="#f4d36b" ${K(2.5)}/>` },
+
+  /* ---------- tools and bits ---------- */
+  germ: { vb: '0 0 60 60', draw: o => { const c = o.color || '#8cc47e'; return `<path d="M30 6 Q38 2 42 10 Q52 8 52 18 Q60 24 54 32 Q60 42 50 46 Q48 56 38 52 Q30 60 22 52 Q12 56 10 46 Q0 42 6 32 Q0 22 10 18 Q10 8 20 10 Q24 2 30 6 Z" fill="${c}" ${K(3.5)}/>
+    <circle cx="22" cy="28" r="5" fill="#fff" ${K(2)}/><circle cx="38" cy="28" r="5" fill="#fff" ${K(2)}/><circle cx="23" cy="29" r="2.4" fill="${INK}"/><circle cx="37" cy="29" r="2.4" fill="${INK}"/>
+    <path d="M22 40 Q30 46 38 40" fill="none" ${K(3)}/>`; } },
+  mud: { vb: '0 0 60 60', draw: () => `<path d="M30 8 Q42 6 46 16 Q58 20 52 32 Q58 44 44 48 Q36 58 26 50 Q12 54 12 42 Q2 32 12 24 Q14 10 30 8 Z" fill="#a0764e"/><circle cx="24" cy="26" r="5" fill="#b98a5e"/>` },
+  sponge: { vb: '0 0 100 80', draw: () => `<rect x="8" y="12" width="84" height="56" rx="14" fill="#f4d36b" ${K()}/>
+    ${[[26, 30, 5], [46, 26, 4], [66, 34, 6], [34, 50, 4], [58, 52, 5], [78, 50, 3]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#d9a83c"/>`).join('')}` },
+  spoon: { vb: '0 0 40 100', draw: () => `<ellipse cx="20" cy="18" rx="13" ry="16" fill="#c3c8d0" ${K(4)}/><path d="M20 34 V94" stroke="${INK}" stroke-width="10" stroke-linecap="round"/><path d="M20 34 V94" stroke="#c3c8d0" stroke-width="4.5" stroke-linecap="round"/>` },
+  cushion: { vb: '0 0 100 100', draw: o => `<path d="M14 14 Q50 24 86 14 Q76 50 86 86 Q50 76 14 86 Q24 50 14 14 Z" fill="${o.color || '#f0a65a'}" ${K()}/><circle cx="50" cy="50" r="5" fill="${INK}"/>` },
+  zzz: { vb: '0 0 60 60', draw: () => `<path d="M10 14 H30 L10 38 H30 M36 30 H50 L36 48 H50" fill="none" stroke="#4d6a9c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` },
+  bird: { vb: '0 0 60 40', draw: () => `<path d="M8 22 Q18 8 30 18 Q42 8 52 22" fill="none" ${K(4)}/>` },
+  heartIcon: { vb: '0 0 40 40', draw: () => `<path d="M20 34 C2 22 6 6 20 14 C34 6 38 22 20 34 Z" fill="#e5675c" ${K(3)}/>` },
+  /* clothes on a hanger (uses the same drawing as the girls' clothes) */
+  outfitHanger: { vb: '18 70 84 120', draw: o => {
+    const G = outfitParts(o);
+    const legs = G.hem < 170 && o.type !== 'dress' ? '' : '';
+    return `<path d="M60 92 V80 Q60 72 66 72 Q72 72 70 78" fill="none" ${K(3.5)}/><path d="M34 100 L60 88 L86 100" fill="none" ${K(4)}/>` + legs + G.body +
+      (G.long ? dbl('M47 100 L36 132', G.sleeve, 12, 7) + dbl('M73 100 L84 132', G.sleeve, 12, 7) : '');
+  } },
+
+  /* ---------- food: four bites each ---------- */
+  cereal: { vb: '0 0 160 90', draw: () => `<ellipse cx="80" cy="44" rx="68" ry="12" fill="#fffaf0" ${K(4)}/>` +
+    [[42, 40], [66, 36], [94, 38], [118, 41]].map(([x, y], i) => B(['#f0a65a', '#e5675c', '#f4d36b', '#8cc47e'].map((c, j) => `<circle cx="${x + (j % 2) * 9 - 4}" cy="${y - Math.floor(j / 2) * 7}" r="5.5" fill="none" stroke="${INK}" stroke-width="6"/><circle cx="${x + (j % 2) * 9 - 4}" cy="${y - Math.floor(j / 2) * 7}" r="5.5" fill="none" stroke="${c}" stroke-width="3"/>`).join(''))).join('') + bowlFront('#7aa9de') },
+  toast: { vb: '0 0 160 90', draw: () => plate + [[[22, 70], [52, 32], [80, 70]], [[60, 70], [80, 36], [100, 70]], [[80, 70], [106, 32], [128, 70]], [[114, 70], [136, 40], [150, 70]]].map((t, i) => {
+    const cx = (t[0][0] + t[1][0] + t[2][0]) / 3, cy = (t[0][1] + t[1][1] + t[2][1]) / 3, sh = t.map(([x, y]) => [cx + (x - cx) * .62, cy + (y - cy) * .62]);
+    const d = pts => 'M' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join(' L') + ' Z';
+    return B(`<path d="${d(t)}" fill="#e2a85f" ${K(4)}/><path d="${d(sh)}" fill="${i % 2 ? '#e5675c' : '#f4d36b'}" opacity=".85"/>`);
+  }).join('') },
+  pancakes: { vb: '0 0 160 90', draw: () => plate + [0, 1, 2, 3].map(i => { const y = 66 - i * 11; return B(`<ellipse cx="80" cy="${y}" rx="50" ry="10" fill="#e8b46a" ${K(4)}/><path d="M38 ${y + 2} Q80 ${y + 10} 122 ${y + 2}" fill="none" stroke="#c98a3c" stroke-width="3"/>` +
+    (i === 3 ? `<path d="M50 ${y - 4} Q80 ${y - 10} 110 ${y - 4} Q104 ${y + 10} 96 ${y + 4} Q88 ${y + 14} 80 ${y + 4} Q70 ${y + 12} 62 ${y + 2} Z" fill="#b8742c" opacity=".85"/><path d="M78 ${y - 18} Q70 ${y - 26} 76 ${y - 30} Q84 ${y - 30} 86 ${y - 22} Q90 ${y - 14} 80 ${y - 10} Z" fill="#e5675c" ${K(3)}/>` : '')); }).join('') },
+  fruit: { vb: '0 0 160 90', draw: () => plate +
+    B(`<path d="M18 62 Q40 80 66 58 Q60 70 40 72 Q24 72 18 62 Z" fill="#f4d36b" ${K(4)}/>`) +
+    B(`<path d="M66 40 Q80 34 92 42 Q94 62 80 72 Q66 62 66 40 Z" fill="#e5675c" ${K(4)}/><path d="M70 40 L80 32 L90 40" fill="#8cc47e" ${K(3)}/>`) +
+    B(`<path d="M96 70 A22 22 0 0 1 124 44 L110 66 Z" fill="#fff6c8" ${K(4)}/><path d="M96 70 A22 22 0 0 1 124 44" fill="none" stroke="#e5675c" stroke-width="5"/>`) +
+    B([[132, 60], [142, 60], [137, 51], [127, 51], [147, 51], [137, 42]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="6" fill="#a98bd8" ${K(3)}/>`).join('')) },
+  spaghetti: { vb: '0 0 160 90', draw: () => plate + [[46, 60], [70, 54], [94, 56], [116, 62]].map(([x, y], i) => B(
+    `<path d="M${x - 18} ${y + 8} Q${x - 22} ${y - 10} ${x} ${y - 12} Q${x + 22} ${y - 10} ${x + 18} ${y + 8} Z" fill="#f4dc8a" ${K(4)}/>
+     <path d="M${x - 12} ${y} q6 -8 12 0 q6 8 12 0 M${x - 10} ${y - 6} q6 -6 12 0" fill="none" stroke="#d9b45a" stroke-width="2.5"/>
+     <path d="M${x - 12} ${y - 8} Q${x} ${y - 16} ${x + 12} ${y - 8} Q${x} ${y - 2} ${x - 12} ${y - 8} Z" fill="#e5675c"/>${i % 2 ? '' : `<circle cx="${x + 2}" cy="${y - 12}" r="6" fill="#9a5a3a" ${K(3)}/>`}`)).join('') },
+  fishVeg: { vb: '0 0 160 90', draw: () => plate +
+    B(`<path d="M20 64 Q30 50 54 52 Q70 54 70 62 Q70 70 54 72 Q30 74 20 64 Z" fill="#f0c27a" ${K(4)}/><path d="M34 58 L40 66 M46 56 L52 66" stroke="#d9a050" stroke-width="3"/>`) +
+    B(`<circle cx="84" cy="52" r="9" fill="#5fa857" ${K(3.5)}/><circle cx="96" cy="50" r="8" fill="#5fa857" ${K(3.5)}/><path d="M86 60 L90 72 L94 60" fill="#8cc47e" ${K(3)}/>`) +
+    B(`<path d="M106 70 L130 56" stroke="${INK}" stroke-width="11" stroke-linecap="round"/><path d="M106 70 L130 56" stroke="#f0873a" stroke-width="6" stroke-linecap="round"/><path d="M112 72 L136 64" stroke="${INK}" stroke-width="11" stroke-linecap="round"/><path d="M112 72 L136 64" stroke="#f0873a" stroke-width="6" stroke-linecap="round"/>`) +
+    B([[60, 76], [70, 74], [78, 77], [66, 81]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#8cc47e" ${K(2.5)}/>`).join('')) },
+  sausages: { vb: '0 0 160 90', draw: () => plate +
+    B(`<path d="M94 52 Q120 40 140 54 Q140 72 116 72 Q92 70 94 52 Z" fill="#fffaf0" ${K(4)}/><path d="M110 50 Q118 46 124 52" fill="none" stroke="#e8dcc0" stroke-width="3"/>`) +
+    B(`<rect x="22" y="44" width="62" height="16" rx="8" fill="#c0603f" ${K(4)}/><path d="M34 48 Q44 46 52 50" stroke="#e58a6a" stroke-width="3" fill="none" stroke-linecap="round"/>`) +
+    B(`<rect x="28" y="60" width="62" height="16" rx="8" fill="#b5553a" ${K(4)}/><path d="M40 64 Q50 62 58 66" stroke="#e58a6a" stroke-width="3" fill="none" stroke-linecap="round"/>`) +
+    B([[102, 76], [112, 78], [122, 76], [132, 74], [117, 70]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#8cc47e" ${K(2.5)}/>`).join('')) },
+  soup: { vb: '0 0 160 90', draw: () => `<ellipse cx="80" cy="44" rx="68" ry="12" fill="#f0a65a" ${K(4)}/>` +
+    [[46, 42], [70, 46], [94, 40], [116, 44]].map(([x, y], i) => B(i % 2 ? `<rect x="${x - 6}" y="${y - 5}" width="12" height="10" rx="2" fill="#e2b06a" ${K(2.5)}/>` : `<circle cx="${x}" cy="${y}" r="6" fill="#8cc47e" ${K(2.5)}/>`)).join('') +
+    `<path d="M120 20 Q130 10 126 0 M100 22 Q110 12 104 2" fill="none" stroke="#c9b9a6" stroke-width="3" stroke-linecap="round"/>` + bowlFront('#e5675c') },
+
+  /* ---------- TV show stars ---------- */
+  showBunny: { vb: '0 0 100 100', draw: () => `<path d="M30 80 L18 96 L40 88 Z" fill="#f0a65a" ${K(3.5)}/><path d="M24 70 Q50 20 86 30 Q80 66 34 84 Z" fill="#e3e7ec" ${K()}/>
+    <circle cx="62" cy="46" r="10" fill="#9fd3f0" ${K(3.5)}/><path d="M58 38 L52 14 Q58 10 62 30 M64 36 L66 10 Q72 10 68 32" fill="#fff" ${K(3.5)}/><circle cx="60" cy="46" r="2" fill="${INK}"/><circle cx="66" cy="46" r="2" fill="${INK}"/>` },
+  showDino: { vb: '0 0 100 100', draw: () => `<path d="M20 70 Q4 60 8 48 Q18 60 30 60" fill="#8cc47e" ${K(4)}/>
+    <ellipse cx="44" cy="64" rx="26" ry="20" fill="#8cc47e" ${K()}/><path d="M56 52 Q58 22 74 20 Q92 20 90 34 Q88 42 74 42 Q70 52 64 58" fill="#8cc47e" ${K()}/>
+    <circle cx="80" cy="30" r="3" fill="${INK}"/><path d="M76 38 Q82 40 86 36" fill="none" ${K(2.5)}/><path d="M32 82 V94 M52 82 V94" ${K(7)}/>
+    ${[[30, 46], [42, 43], [54, 44]].map(([x, y]) => `<path d="M${x - 5} ${y + 2} L${x} ${y - 8} L${x + 5} ${y + 2} Z" fill="#f4d36b" ${K(2.5)}/>`).join('')}` },
+  showFish: { vb: '0 0 100 100', draw: () => `<path d="M70 50 L94 30 V70 Z" fill="#f0873a" ${K(4)}/><ellipse cx="46" cy="50" rx="32" ry="24" fill="#f0a65a" ${K()}/>
+    <path d="M40 30 Q50 18 60 30" fill="#f0873a" ${K(3.5)}/><circle cx="30" cy="44" r="6" fill="#fff" ${K(2.5)}/><circle cx="29" cy="44" r="3" fill="${INK}"/>
+    <path d="M22 58 Q28 62 34 58" fill="none" ${K(2.5)}/><path d="M48 36 Q56 50 48 64 M58 38 Q64 50 58 62" fill="none" stroke="#fff" stroke-width="3"/>` }
+});
+
+/* =====================================================================
+   ROOMS — backgrounds for the routine steps (1600 x 1000) and their parts
+   ===================================================================== */
+const wallFloor = (wall, floor, fy = 780) => `<rect x="0" y="0" width="1600" height="${fy}" fill="${wall}"/><rect x="0" y="${fy}" width="1600" height="${1000 - fy}" fill="${floor}"/>
+  ${[1, 2, 3].map(i => `<path d="M0 ${fy + i * 62} H1600" stroke="${shade(floor, -.12)}" stroke-width="3"/>`).join('')}<rect x="0" y="${fy - 18}" width="1600" height="20" fill="${shade(wall, -.08)}"/><path d="M0 ${fy} H1600" ${K(6)}/>`;
+const frame = (x, y, w, h, inner) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#fff" ${K(5)}/>${inner}<rect x="${x + 12}" y="${y + 12}" width="${w - 24}" height="${h - 24}" fill="none" ${K(3)}/>`;
+const rug = (cx, cy, rx, ry, c) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${c}" ${K(5)}/><ellipse cx="${cx}" cy="${cy}" rx="${rx * .78}" ry="${ry * .7}" fill="none" stroke="#fff" stroke-width="5" stroke-dasharray="2 14" stroke-linecap="round"/>`;
+const wstar = (x, y, r, c = '#f4d36b') => `<path d="${starPath(x, y, r, r * .45)}" fill="${c}" ${K(3.5)}/>`;
+
+/* where things go in each room (scene units: x, y, w, h) */
+const ROOM = {
+  bedroom: { win: [650, 150, 300, 280], curL: [596, 112, 214, 420], curR: [790, 112, 214, 420], lamp: [808, 462, 100, 160], clock: [870, 556, 72, 70],
+    blanket: [1104, 586, 436, 150], lying: [1057, 450, 160, 280], pillow: [1085, 590], standX: 620, floor: 900 },
+  living: { tv: [136, 316, 368, 258], seatX: 975, seatY: 770, barX: 1455, barY: 322, danceX: 1000, floor: 915 },
+  kitchen: { win: [620, 110, 360, 290], table: [240, 626, 1120, 374], girlX: 800, girlTop: 296, girlH: 430, plate: [630, 506, 340, 191] },
+  bath: { tub: [300, 520, 1000, 330], tubBack: [300, 380, 1000, 220], girlX: 800, girlTop: 300, girlH: 640, duck: [1070, 470, 110, 110], sponge: [1330, 610, 170, 136] },
+  dress: { rail: [800, 200, 720, 380], rail2: 412, girlX: 400, floor: 910, girlH: 560 }
+};
+
+Object.assign(ART, {
+  bedroom: { vb: '0 0 1600 1000', draw: () => wallFloor('#e7dcf6', '#d9b07c') + `
+    ${wstar(150, 120, 22)}${wstar(260, 190, 14)}${wstar(1180, 140, 18)}${wstar(1400, 230, 24)}${wstar(1300, 330, 12)}
+    ${frame(220, 250, 180, 140, `<path d="M240 370 L300 300 L340 340 L370 310 L390 370 Z" fill="#8cc47e"/><circle cx="350" cy="285" r="14" fill="#f4d36b"/>`)}
+    <rect x="80" y="470" width="380" height="18" rx="5" fill="#d9b07c" ${K(5)}/><path d="M110 488 L130 520 M430 488 L410 520" ${K(5)}/>
+    <circle cx="150" cy="430" r="36" fill="#c98a54" ${K(5)}/><circle cx="124" cy="398" r="13" fill="#c98a54" ${K(4)}/><circle cx="176" cy="398" r="13" fill="#c98a54" ${K(4)}/>
+    <circle cx="140" cy="426" r="4" fill="${INK}"/><circle cx="160" cy="426" r="4" fill="${INK}"/><ellipse cx="150" cy="442" rx="9" ry="6" fill="#f1d3a8" ${K(2.5)}/>
+    ${books(220, 470, 120)}<circle cx="400" cy="440" r="30" fill="#7aa9de" ${K(5)}/><path d="M372 440 H428 M400 412 Q384 440 400 468" fill="none" stroke="#fff" stroke-width="5"/>
+    <path d="M570 118 H1030" ${K(9)}/><circle cx="566" cy="118" r="11" fill="#d9b07c" ${K(4)}/><circle cx="1034" cy="118" r="11" fill="#d9b07c" ${K(4)}/>
+    ${rug(520, 890, 300, 64, '#f7b6c9')}
+    <rect x="800" y="622" width="146" height="158" fill="#d6ae7c" ${K(5)}/><path d="M800 690 H946" ${K(4)}/><circle cx="873" cy="660" r="6" fill="${INK}"/><circle cx="873" cy="728" r="6" fill="${INK}"/>
+    <rect x="790" y="612" width="166" height="16" rx="5" fill="#c99a68" ${K(5)}/>
+    <path d="M964 800 V474 Q964 432 1004 432 Q1044 432 1044 474 V800" fill="#c9a3ea" ${K(6)}/>${wstar(1004, 488, 18, '#fff6c8')}
+    <rect x="1490" y="560" width="54" height="240" rx="10" fill="#c9a3ea" ${K(6)}/>
+    <rect x="1000" y="690" width="520" height="70" fill="#c99a68" ${K(5)}/><path d="M1010 760 V800 M1510 760 V800" ${K(8)}/>
+    <rect x="996" y="634" width="530" height="64" rx="14" fill="#fff8ec" ${K(5)}/>
+    <path d="M1010 600 Q1010 572 1040 572 H1160 Q1190 572 1190 600 V626 Q1190 650 1160 650 H1040 Q1010 650 1010 626 Z" fill="#fff" ${K(5)}/>` },
+  windowDay: { vb: '0 0 300 280', draw: () => `<rect x="6" y="6" width="288" height="250" fill="#cfe8f8"/>
+    <circle cx="210" cy="80" r="34" fill="#f4d36b" ${K(4)}/>${cloud(40, 140, 1)}<path d="M20 230 Q90 196 160 222 T290 214 V250 H20 Z" fill="#a8d08a"/>
+    <rect x="6" y="6" width="288" height="250" fill="none" stroke="#fff" stroke-width="14"/><rect x="0" y="0" width="300" height="262" fill="none" ${K(6)}/>
+    <path d="M150 6 V256 M6 130 H294" stroke="#fff" stroke-width="12"/><path d="M150 6 V256 M6 130 H294" ${K(3)}/><rect x="-10" y="256" width="320" height="22" rx="5" fill="#fff" ${K(5)}/>` },
+  windowNight: { vb: '0 0 300 280', draw: () => `<rect x="6" y="6" width="288" height="250" fill="#2c3768"/>
+    <path d="M214 46 A34 34 0 1 0 250 92 A27 27 0 0 1 214 46 Z" fill="#f4d36b" ${K(4)}/>${[[50, 50], [90, 100], [40, 190], [120, 40], [250, 190], [190, 210]].map(([x, y]) => `<path d="${starPath(x, y, 7, 3)}" fill="#fff6c8"/>`).join('')}
+    <rect x="6" y="6" width="288" height="250" fill="none" stroke="#e8e4f0" stroke-width="14"/><rect x="0" y="0" width="300" height="262" fill="none" ${K(6)}/>
+    <path d="M150 6 V256 M6 130 H294" stroke="#e8e4f0" stroke-width="12"/><path d="M150 6 V256 M6 130 H294" ${K(3)}/><rect x="-10" y="256" width="320" height="22" rx="5" fill="#e8e4f0" ${K(5)}/>` },
+  curtain: { vb: '0 0 214 420', draw: o => `<path d="M8 6 H206 L200 404 Q176 416 150 404 Q126 416 104 404 Q80 416 56 404 Q32 416 14 404 Z" fill="${o.color || '#f29bb8'}" ${K(5)}/>
+    <path d="M56 14 Q50 200 58 400 M104 14 Q110 200 104 402 M152 14 Q146 200 152 400" fill="none" stroke="${shade(o.color || '#f29bb8', -.15)}" stroke-width="5" stroke-linecap="round"/>
+    ${[30, 80, 130, 180].map(x => `<circle cx="${x}" cy="8" r="7" fill="#d9b07c" ${K(3)}/>`).join('')}` },
+  lamp: { vb: '0 0 100 160', draw: o => (o.on ? `<circle cx="50" cy="56" r="58" fill="#fff6c8" opacity=".6"/>` : '') + `<rect x="24" y="146" width="52" height="12" rx="5" fill="#c99a68" ${K(4)}/><path d="M50 146 V76" ${K(6)}/>
+    <path d="M24 30 H76 L90 80 H10 Z" fill="${o.on ? '#fff1a8' : '#e3c9a0'}" ${K(5)}/>` },
+  blanket: { vb: '0 0 440 150', draw: o => { const c = o.color || '#a98bd8'; return `<path d="M6 30 Q4 10 26 8 H418 Q436 10 434 30 V122 Q434 142 414 142 H26 Q4 142 6 122 Z" fill="${c}" ${K(5)}/>
+    ${[110, 220, 330].map(x => `<path d="M${x} 10 V140" stroke="${shade(c, -.12)}" stroke-width="4" stroke-dasharray="3 10" stroke-linecap="round"/>`).join('')}
+    ${[[60, 76], [170, 60], [280, 86], [380, 62]].map(([x, y]) => `<path d="${starPath(x, y, 14, 6)}" fill="#fff6c8" ${K(3)}/>`).join('')}
+    <path d="M6 30 Q4 10 26 8 H60 V142 H26 Q4 142 6 122 Z" fill="#fff8ec" ${K(5)}/>`; } },
+  glowStars: { vb: '0 0 1600 420', draw: () => [[120, 60], [300, 140], [470, 70], [620, 200], [1080, 80], [1240, 170], [1420, 70], [1520, 250], [200, 300], [1150, 320], [980, 230]].map(([x, y], i) =>
+    `<path d="${starPath(x, y, 16 + (i % 3) * 6, 7 + (i % 3) * 3)}" fill="#e9ff9a" opacity=".95"/>`).join('') + `<path d="M760 40 A44 44 0 1 0 806 100 A36 36 0 0 1 760 40 Z" fill="#e9ff9a"/>` },
+
+  living: { vb: '0 0 1600 1000', draw: () => wallFloor('#fcefc6', '#c99a68') + `
+    ${frame(840, 170, 270, 230, `<rect x="852" y="182" width="246" height="206" fill="#cfe8f8"/>${cloud(880, 260, 1)}<path d="M975 182 V388 M852 285 H1098" stroke="#fff" stroke-width="10"/>`)}
+    <rect x="110" y="294" width="420" height="300" rx="16" fill="#4a423e" ${K(6)}/><rect x="136" y="316" width="368" height="258" rx="6" fill="#2f3b52" ${K(4)}/>
+    <path d="M290 594 L270 622 M350 594 L370 622" ${K(7)}/>
+    <rect x="80" y="620" width="480" height="160" fill="#7aa9de" ${K(6)}/><path d="M320 620 V780" ${K(4)}/><circle cx="296" cy="700" r="6" fill="${INK}"/><circle cx="344" cy="700" r="6" fill="${INK}"/>
+    <path d="M600 780 L586 700 H664 L650 780 Z" fill="#d9845f" ${K(5)}/><path d="M625 700 Q590 640 560 620 M625 700 Q630 620 640 580 M625 700 Q660 640 700 630" fill="none" stroke="#5fa857" stroke-width="12" stroke-linecap="round"/>
+    ${rug(1000, 880, 330, 60, '#f0a65a')}
+    <path d="M700 650 V540 Q700 500 740 500 H1210 Q1250 500 1250 540 V650 Z" fill="#6fc2b8" ${K(6)}/>
+    <path d="M760 520 Q840 504 900 520 Q906 580 900 640 Q840 650 760 640 Q752 580 760 520 Z" fill="#f4d36b" ${K(5)}/><path d="M1060 520 Q1130 504 1190 520 Q1196 580 1190 640 Q1130 650 1060 640 Q1054 580 1060 520 Z" fill="#f29bb8" ${K(5)}/>
+    <rect x="690" y="640" width="570" height="90" rx="16" fill="#7cd0c5" ${K(6)}/><path d="M975 646 V726" ${K(4)}/>
+    <rect x="652" y="570" width="92" height="190" rx="30" fill="#6fc2b8" ${K(6)}/><rect x="1206" y="570" width="92" height="190" rx="30" fill="#6fc2b8" ${K(6)}/>
+    <path d="M700 760 V790 M1250 760 V790" ${K(9)}/>
+    <rect x="1336" y="214" width="244" height="566" fill="#f3e2bc" ${K(6)}/><rect x="1356" y="234" width="204" height="546" fill="#e6d0a0"/><path d="M1356 234 V780 M1560 234 V780" ${K(4)}/>
+    <rect x="1340" y="310" width="236" height="22" rx="11" fill="#c3c8d0" ${K(5)}/><circle cx="1350" cy="321" r="16" fill="#e5675c" ${K(4)}/><circle cx="1566" cy="321" r="16" fill="#e5675c" ${K(4)}/>` },
+
+  kitchen: { vb: '0 0 1600 1000', draw: () => wallFloor('#e1efd3', '#e8d5b0') + `
+    <rect x="0" y="420" width="1600" height="120" fill="#fff" opacity=".6"/>${[...Array(20)].map((_, i) => `<path d="M${i * 80} 420 V540" stroke="#cfe3c0" stroke-width="3"/>`).join('')}
+    <rect x="40" y="560" width="440" height="220" fill="#fff8ec" ${K(5)}/><path d="M186 560 V780 M332 560 V780" ${K(4)}/>
+    ${[160, 212, 306, 358].map(x => `<circle cx="${x}" cy="610" r="6" fill="${INK}"/>`).join('')}
+    <rect x="30" y="540" width="460" height="24" rx="5" fill="#d9b07c" ${K(5)}/>
+    <path d="M90 540 V480 Q90 456 120 456 H160 Q190 456 190 480 V540 Z" fill="#e5675c" ${K(5)}/><path d="M190 480 Q214 480 214 500" fill="none" ${K(5)}/><path d="M120 456 Q140 436 160 456" fill="none" ${K(5)}/>
+    <rect x="290" y="470" width="140" height="70" rx="14" fill="#c3c8d0" ${K(5)}/><path d="M320 470 V456 M380 470 V456" ${K(6)}/>
+    <rect x="80" y="230" width="380" height="16" rx="4" fill="#d9b07c" ${K(5)}/>
+    ${[[110, '#f0a65a'], [180, '#8cc47e'], [250, '#e5675c'], [320, '#7aa9de']].map(([x, c]) => `<rect x="${x}" y="164" width="50" height="66" rx="8" fill="#fff" ${K(4)}/><rect x="${x}" y="190" width="50" height="40" rx="6" fill="${c}"/><rect x="${x - 2}" y="156" width="54" height="14" rx="4" fill="${shade(c, -.1)}" ${K(3)}/>`).join('')}
+    <rect x="1240" y="250" width="240" height="530" rx="20" fill="#eef2f4" ${K(6)}/><path d="M1240 430 H1480" ${K(5)}/><path d="M1270 300 V380 M1270 470 V560" ${K(7)}/>
+    ${frame(1280, 290, 70, 80, `<path d="M1300 352 L1315 320 L1330 352 Z" fill="#7aa9de"/>`)}
+    <path d="M640 660 V470 Q640 440 670 440 H930 Q960 440 960 470 V660" fill="#d6ae7c" ${K(6)}/><path d="M680 480 H920 M680 530 H920" ${K(4)}/>` },
+  tableFront: { vb: '0 0 1120 374', draw: () => `<path d="M80 30 V374 M1040 30 V374" ${K(14)}/><path d="M80 30 V374 M1040 30 V374" stroke="#c99a68" stroke-width="6"/>
+    <rect x="0" y="6" width="1120" height="40" rx="10" fill="#d9b07c" ${K(6)}/>
+    <path d="M30 40 H1090 V150 Q1062 172 1034 150 Q1006 172 978 150 Q950 172 922 150 Q894 172 866 150 Q838 172 810 150 Q782 172 754 150 Q726 172 698 150 Q670 172 642 150 Q614 172 586 150 Q558 172 530 150 Q502 172 474 150 Q446 172 418 150 Q390 172 362 150 Q334 172 306 150 Q278 172 250 150 Q222 172 194 150 Q166 172 138 150 Q110 172 82 150 Q54 172 30 150 Z" fill="#fbe0d4" ${K(5)}/>
+    ${[...Array(10)].map((_, i) => `<path d="M${60 + i * 105} 44 V146" stroke="#f2a7a0" stroke-width="10" opacity=".7"/>`).join('')}<path d="M30 76 H1090 M30 114 H1090" stroke="#f2a7a0" stroke-width="10" opacity=".7"/>` },
+
+  bathroom: { vb: '0 0 1600 1000', draw: () => `<rect width="1600" height="1000" fill="#d6eef0"/>${[...Array(20)].map((_, i) => `<path d="M${i * 90} 0 V800 M0 ${i * 90} H1600" stroke="#bfe0e4" stroke-width="4"/>`).join('')}
+    <rect x="0" y="800" width="1600" height="200" fill="#a9d0d6"/><path d="M0 800 H1600" ${K(6)}/>
+    <path d="M90 250 H330" ${K(8)}/><path d="M110 250 H310 V470 Q210 490 110 470 Z" fill="#f29bb8" ${K(5)}/><path d="M110 420 H310" stroke="#fff" stroke-width="8"/>
+    <rect x="1280" y="330" width="250" height="18" rx="5" fill="#fff" ${K(5)}/>
+    <rect x="1300" y="250" width="50" height="80" rx="12" fill="#8cc47e" ${K(4)}/><rect x="1370" y="270" width="44" height="60" rx="10" fill="#a98bd8" ${K(4)}/><rect x="1432" y="240" width="50" height="90" rx="14" fill="#f0a65a" ${K(4)}/>
+` },
+  tubBack: { vb: '0 0 1000 220', draw: () => `<ellipse cx="500" cy="186" rx="470" ry="30" fill="#bfe4f5" ${K(6)}/>
+    <path d="M880 186 V48 Q880 10 920 10 Q962 10 962 48" fill="none" ${K(8)}/><path d="M940 48 h44" ${K(8)}/>` },
+  tubFront: { vb: '0 0 1000 330', draw: () => `<path d="M30 46 H970 V120 Q970 270 800 270 H200 Q30 270 30 120 Z" fill="#fff" ${K(6)}/>
+    <path d="M110 120 Q120 230 220 238" fill="none" stroke="#e3eef4" stroke-width="16" stroke-linecap="round"/>
+    <path d="M190 262 L160 318 H230 L240 262 M810 262 L840 318 H770 L760 262" fill="#f4d36b" ${K(5)}/>
+    ${[[70, 46, 34], [130, 36, 40], [200, 44, 32], [260, 30, 44], [330, 42, 34], [670, 40, 36], [740, 30, 44], [810, 44, 34], [880, 36, 40], [940, 46, 30]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#f3fbff" ${K(4)}/>`).join('')}
+    ${[[110, 22, 8], [250, 14, 9], [720, 12, 8], [860, 20, 9]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity=".9"/>`).join('')}` },
+
+  garden: { vb: '0 0 1600 1000', draw: () => `<rect width="1600" height="1000" fill="#dff0fb"/><rect y="400" width="1600" height="300" fill="#eef7fb"/>
+    <circle cx="180" cy="150" r="70" fill="#f4d36b" ${K(5)}/>${cloud(520, 160, 1.6)}${cloud(1100, 120, 1.3)}
+    ${[...Array(24)].map((_, i) => `<path d="M${i * 70 + 10} 720 V600 L${i * 70 + 35} 572 L${i * 70 + 60} 600 V720 Z" fill="#fff" ${K(4)}/>`).join('')}<path d="M0 640 H1600 M0 690 H1600" ${K(4)}/>
+    <rect y="720" width="1600" height="280" fill="#c4dea0"/><path d="M0 720 H1600" ${K(5)}/>
+    <rect x="1340" y="380" width="44" height="360" fill="#c49a6c" ${K(5)}/><circle cx="1300" cy="360" r="110" fill="#86c27a" ${K(5)}/><circle cx="1440" cy="330" r="120" fill="#9bd08a" ${K(5)}/><circle cx="1370" cy="240" r="110" fill="#9bd08a" ${K(5)}/>
+    ${[[1300, 340], [1420, 300], [1380, 220], [1450, 400]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="13" fill="#e5675c" ${K(3)}/>`).join('')}
+    ${[[500, 830, '#e5675c'], [620, 870, '#f4d36b'], [880, 840, '#a98bd8'], [1040, 880, '#f29bb8'], [1220, 830, '#7aa9de']].map(([x, y, c]) => `<path d="M${x} ${y} V${y + 60}" stroke="#5fa857" stroke-width="7"/>${[0, 72, 144, 216, 288].map(a => `<circle cx="${x + 15 * Math.cos(a * Math.PI / 180)}" cy="${y + 15 * Math.sin(a * Math.PI / 180)}" r="11" fill="${c}" ${K(3)}/>`).join('')}<circle cx="${x}" cy="${y}" r="9" fill="#f4d36b" ${K(3)}/>`).join('')}` },
+
+  dressRoom: { vb: '0 0 1600 1000', draw: () => wallFloor('#fbe0d4', '#d9b07c') + `
+    ${wstar(160, 140, 20)}${wstar(560, 120, 16)}${frame(420, 210, 200, 160, `<circle cx="520" cy="290" r="40" fill="#f4d36b"/>`)}
+    ${rug(400, 910, 300, 56, '#a9c7ea')}
+    <rect x="760" y="110" width="800" height="700" rx="14" fill="#c99a68" ${K(6)}/><rect x="790" y="140" width="740" height="640" fill="#f3e3cc" ${K(4)}/>
+    <path d="M790 600 H1530" ${K(5)}/><rect x="790" y="600" width="740" height="180" fill="#ead2b0"/>
+    ${[880, 1060, 1240, 1420].map((x, i) => `<rect x="${x - 50}" y="${700 - i % 2 * 20}" width="80" height="${60 + i % 2 * 20}" rx="10" fill="${['#e5675c', '#7aa9de', '#f4d36b', '#8cc47e'][i]}" ${K(4)}/>`).join('')}
+    <path d="M800 210 H1520" stroke="${INK}" stroke-width="16" stroke-linecap="round"/><path d="M800 210 H1520" stroke="#c3c8d0" stroke-width="8" stroke-linecap="round"/>
+    <path d="M760 120 L700 150 V780 L760 800 Z" fill="#d6ae7c" ${K(5)}/><circle cx="740" cy="460" r="8" fill="#f4d36b" ${K(3)}/>` },
+  mirror: { vb: '0 0 600 700', draw: () => `<path fill-rule="evenodd" d="M300 10 C470 10 590 150 590 350 C590 550 470 690 300 690 C130 690 10 550 10 350 C10 150 130 10 300 10 Z M300 50 C450 50 550 175 550 350 C550 525 450 650 300 650 C150 650 50 525 50 350 C50 175 150 50 300 50 Z" fill="#f4d36b" ${K(6)}/>
+    ${[[300, 30], [80, 200], [520, 200], [80, 500], [520, 500], [300, 670]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="10" fill="#f29bb8" ${K(3)}/>`).join('')}` }
+});
+
+/* ---------- more sound effects for the routines (all made with Web Audio) ---------- */
+Object.assign(Sfx.sounds, {
+  alarm(d)   { for (let i = 0; i < 8; i++) this.tone(i % 2 ? 1320 : 1180, d + i * .09, .07, { type: 'square', vol: .025 }); },
+  tweet(d)   { [0, .18, .5, .62].forEach(o => this.tone(2600, d + o, .1, { to: 3600, vol: .045 })); },
+  giggle(d)  { [0, .11, .22, .33, .44].forEach((o, i) => this.tone(700 + i * 40, d + o, .08, { to: 980 + i * 40, type: 'triangle', vol: .06 })); },
+  yawn(d)    { this.tone(420, d, 1.0, { to: 210, type: 'triangle', vol: .07, attack: .2 }); },
+  chomp(d)   { [0, .14].forEach(o => this.noise(d + o, .07, { f: 900, q: .8, vol: .12 })); },
+  scrub(d)   { this.noise(d, .09, { f: 3200, q: 1.2, vol: .05 }); },
+  squish(d)  { this.tone(300, d, .15, { to: 90, vol: .12 }); this.noise(d, .1, { f: 600, vol: .05 }); },
+  ting(d)    { [1568, 2093, 3136].forEach((f, i) => this.tone(f, d + i * .08, .5, { vol: .06 })); },
+  brush(d)   { this.noise(d, .32, { f: 2400, fTo: 1200, q: .8, vol: .06, attack: .08 }); },
+  splash(d)  { this.noise(d, .6, { type: 'lowpass', f: 1800, fTo: 300, vol: .2, attack: .01 }); for (let i = 0; i < 6; i++) this.tone(rand(500, 1300), d + rand(.05, .4), .08, { vol: .04 }); },
+  yum(d)     { this.tone(392, d, .18, { to: 523, type: 'triangle', vol: .1 }); this.tone(659, d + .2, .3, { type: 'triangle', vol: .1 }); },
+  click(d)   { this.noise(d, .03, { f: 2500, q: 4, vol: .15 }); },
+  bell(d)    { [0, .45].forEach(o => [784, 1976, 3100].forEach(f => this.tone(f, d + o, 1.0, { vol: .035, attack: .003 }))); },
+  page(d)    { this.noise(d, .28, { f: 1600, fTo: 3800, q: .7, vol: .07, attack: .06 }); },
+  tune(d)    { [523, 659, 784, 659, 880, 784, 659, 523].forEach((f, i) => this.tone(f, d + i * .15, .14, { type: 'square', vol: .022 })); },
+  tvtune(d, k) { const m = { bunny: [784, 988, 1175, 1568, 1175], dino: [196, 247, 196, 294, 262], fish: [523, 494, 523, 659, 587] }[k] || [523, 659, 784];
+    m.forEach((f, i) => this.tone(f, d + i * .2, .18, { type: 'triangle', vol: .06 })); },
+  lullaby(d) { [659, 784, 880, 784, 659, 587, 523, 587, 659].forEach((f, i) => this.tone(f, d + i * .38, .9, { vol: .06, attack: .02 })); }
+});
+
+
 /* ---------- grown-up settings ---------- */
 function openGrown() {
   const st = Store.settings, today = new Date().getDay(), cur = currentDay();
@@ -1991,7 +3307,7 @@ function openGrown() {
 }
 function closeGrown() {
   $('#grownup').hidden = true;
-  if (['pack', 'unpack', 'mode'].includes(S.screen)) go(S.screen);
+  if (S.screen === 'routine') runStep(S.stepIndex); else if (S.screen === 'mode') go('mode');
 }
 function bindGrown() {
   const ov = $('#grownup');
@@ -2043,6 +3359,7 @@ function boot() {
   document.addEventListener('gesturestart', e => e.preventDefault());
   document.addEventListener('touchmove', e => { if (e.touches.length > 1 || Drag.active) e.preventDefault(); }, { passive: false });
   addEventListener('resize', () => Hint.stop());
+  window.PackUp = { art, ART, CONFIG, S, Store, go, figure, outfitDef };   // handy for testing in the browser console
   go('home', { child: null });
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
