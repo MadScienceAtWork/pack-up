@@ -1,6 +1,6 @@
 /* Pack Up! — offline support.
    After you edit index.html, change CACHE (e.g. v2, v3…) so tablets fetch the new version. */
-const CACHE = 'pack-up-v6';
+const CACHE = 'pack-up-v7';
 const FILES = [
   './',
   './index.html',
